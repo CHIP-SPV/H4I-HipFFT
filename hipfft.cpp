@@ -19,44 +19,64 @@ void say_hello()
 
 
 
+hipfftResult hipfftCreate(hipfftHandle *plan)
+{
+    // create the plan handle
+    hipfftHandle h = new hipfftHandle_t;
+
+    // HIP supports multiple backends hence query current backend name
+    auto backendName = hipGetBackendName();
+    // Obtain the handles to the back handlers.
+    unsigned long handles[4];
+    int           nHandles = 4;
+    hipGetBackendNativeHandles((uintptr_t)NULL, handles, &nHandles);
+    auto *ctxt = H4I::MKLShim::Create(handles, nHandles, backendName);
+
+    // assign h->ctxt to use a consistent queue context with CHIP-SPV
+    h->ctxt = ctxt;
+
+    // assign plan and return
+    *plan = h;
+
+    // rocFFT/hipFFT returns either HIPFFT_SUCCESS or HIPFFT_INVALID_VALUE
+    // So, mimic that behavior here ... unless someone can come up with a 
+    // better idea
+    return (*plan != nullptr) ? HIPFFT_SUCCESS : HIPFFT_INVALID_VALUE;
+}
+
+
 hipfftResult hipfftPlan1d(hipfftHandle *plan,
                           int nx,
                           hipfftType type,
                           int batch /* deprecated - use hipfftPlanMany */)                                        
 {
-    hipfftResult result = HIPFFT_SUCCESS;
+    // local handle 
+    hipfftHandle h = nullptr;
+    hipfftResult result = hipfftCreate(&h);
 
-    if (plan != nullptr)
-    {
-	// create the plan handle
-	hipfftHandle h = new hipfftHandle_t;
+    // re-assign values in local handle
+    h->scale_factor = 1.0;
 
-        // HIP supports multiple backends hence query current backend name
-        auto backendName = hipGetBackendName();
-        // Obtain the handles to the back handlers.
-        unsigned long handles[4];
-        int           nHandles = 4;
-        hipGetBackendNativeHandles((uintptr_t)NULL, handles, &nHandles);
-        auto *ctxt = H4I::MKLShim::Create(handles, nHandles, backendName);
+    // create the appropriate descriptor for the fft plan
+    auto *desc = H4I::MKLShim::createDescriptor(h->ctxt,nx);
+    h->descSR = desc;
 
-	// check the queue from the mklshim side
-	H4I::MKLShim::checkFFTQueue(ctxt,nx);
-	std::cout << " after testing ctxt " << std::endl;
-
-	// assign h->ctxt and test
-	h->ctxt = ctxt;
-	H4I::MKLShim::checkFFTQueue(h->ctxt,nx);
-	std::cout << " after testing h->ctxt " << std::endl;
-
-	*plan = h;
-    }
+    // set plan
+    *plan = h;
 
 #if 0
     switch (type)
     {
        case HIPFFT_R2C:
+       case HIPFFT_C2R:
        {
           *plan = new HIPDescriptor<HIPFFT_R2C>(nx);
+          break;
+       }
+       case HIPFFT_D2Z:
+       case HIPFFT_Z2D:
+       {
+          *plan = new HIPDescriptor<HIPFFT_D2Z>(nx);
           break;
        }
        case HIPFFT_C2C:
@@ -64,24 +84,9 @@ hipfftResult hipfftPlan1d(hipfftHandle *plan,
           *plan = new HIPDescriptor<HIPFFT_C2C>(nx);
           break;
        }
-       case HIPFFT_D2Z:
-       {
-          *plan = new HIPDescriptor<HIPFFT_D2Z>(nx);
-          break;
-       }
        case HIPFFT_Z2Z:
        {
           *plan = new HIPDescriptor<HIPFFT_Z2Z>(nx);
-          break;
-       }
-       case HIPFFT_C2R:
-       {
-          *plan = new HIPDescriptor<HIPFFT_C2R>(nx);
-          break;
-       }
-       case HIPFFT_Z2D:
-       {
-          *plan = new HIPDescriptor<HIPFFT_Z2D>(nx);
           break;
        }
        default:
@@ -95,6 +100,17 @@ hipfftResult hipfftPlan1d(hipfftHandle *plan,
 
   return result;
 
+}
+
+hipfftResult checkPlan(hipfftHandle plan)
+{
+    hipfftResult result = HIPFFT_SUCCESS;
+
+    H4I::MKLShim::checkFFTQueue(plan->ctxt);
+
+    H4I::MKLShim::checkFFTPlan(plan->ctxt, plan->descSR);
+
+    return result;
 }
 
 hipfftResult hipfftPlan2d(hipfftHandle *plan,
@@ -204,6 +220,9 @@ int main(int argc, char **argv)
     std::cout << std::scientific << std::setprecision(8);
     std::cout << " plan_r2c scale factor = " << plan_r2c->scale_factor << std::endl;
     std::cout << " plan_c2r scale factor = " << plan_c2r->scale_factor << std::endl;
+
+    result = checkPlan(plan_r2c);
+    result = checkPlan(plan_c2r);
 
     // local memory
     float *cx = NULL;
