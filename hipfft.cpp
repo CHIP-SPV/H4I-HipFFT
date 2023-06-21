@@ -24,6 +24,7 @@ hipfftResult hipfftCreate(hipfftHandle *plan)
     // create the plan handle
     hipfftHandle h = new hipfftHandle_t;
 
+    // Next, create the context struct
     // HIP supports multiple backends hence query current backend name
     auto backendName = hipGetBackendName();
     // Obtain the handles to the back handlers.
@@ -39,8 +40,7 @@ hipfftResult hipfftCreate(hipfftHandle *plan)
     *plan = h;
 
     // rocFFT/hipFFT returns either HIPFFT_SUCCESS or HIPFFT_INVALID_VALUE
-    // So, mimic that behavior here ... unless someone can come up with a 
-    // better idea
+    // So, mimic that behavior here ... unless there's a better idea
     return (*plan != nullptr) ? HIPFFT_SUCCESS : HIPFFT_INVALID_VALUE;
 }
 
@@ -50,57 +50,84 @@ hipfftResult hipfftPlan1d(hipfftHandle *plan,
                           hipfftType type,
                           int batch /* deprecated - use hipfftPlanMany */)                                        
 {
-    // local handle 
-    hipfftHandle h = nullptr;
-    hipfftResult result = hipfftCreate(&h);
+    hipfftResult result = HIPFFT_SUCCESS;
 
-    // re-assign values in local handle
-    h->scale_factor = 1.0;
+    if (nx > 0)
+    {
+        // local handle 
+        hipfftHandle h = nullptr;
+
+	// create a new handle
+        result = hipfftCreate(&h);
+
+	// call hipfftMakePlan1d to create the descriptor
+        result = hipfftMakePlan1d(h, nx, type, batch, NULL);
+
+        // set plan
+        *plan = h;
+    }
+    else
+    {
+        *plan = NULL;
+        result = HIPFFT_INVALID_PLAN;
+    }
+
+  return result;
+}
+
+
+
+
+hipfftResult hipfftMakePlan1d(hipfftHandle plan,
+                              int nx,
+                              hipfftType type,
+                              int batch /* deprecated - use hipfftPlanMany */,
+			      size_t *workSize)
+{
+    // pre-set result
+    hipfftResult result = HIPFFT_SUCCESS;
 
     // create the appropriate descriptor for the fft plan
-    auto *desc = H4I::MKLShim::createDescriptor(h->ctxt,nx);
-    h->descSR = desc;
-
-    // set plan
-    *plan = h;
-
-#if 0
     switch (type)
     {
        case HIPFFT_R2C:
        case HIPFFT_C2R:
        {
-          *plan = new HIPDescriptor<HIPFFT_R2C>(nx);
+	  auto *desc = H4I::MKLShim::createFFTDescriptorSR(plan->ctxt,nx);
+	  plan->descSR = desc;
           break;
        }
        case HIPFFT_D2Z:
        case HIPFFT_Z2D:
        {
-          *plan = new HIPDescriptor<HIPFFT_D2Z>(nx);
+	  auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,nx);
+          plan->descDR = desc;
           break;
        }
        case HIPFFT_C2C:
        {
-          *plan = new HIPDescriptor<HIPFFT_C2C>(nx);
+	  auto *desc = H4I::MKLShim::createFFTDescriptorSC(plan->ctxt,nx);
+          plan->descSC = desc;
           break;
        }
        case HIPFFT_Z2Z:
        {
-          *plan = new HIPDescriptor<HIPFFT_Z2Z>(nx);
+	  auto *desc = H4I::MKLShim::createFFTDescriptorDC(plan->ctxt,nx);
+          plan->descDC = desc;
           break;
        }
        default:
        {
-          *plan = NULL;
           result = HIPFFT_INVALID_PLAN;
           break;
        }
     }
-#endif
 
-  return result;
-
+    return result;
 }
+
+
+
 
 hipfftResult checkPlan(hipfftHandle plan)
 {
@@ -121,47 +148,6 @@ hipfftResult hipfftPlan2d(hipfftHandle *plan,
     hipfftResult result = HIPFFT_SUCCESS;
 
 #if 0
-    // for now these are just 1d transforms until I add the code
-    // for 2d intel ffts
-    switch (type)
-    {
-       case HIPFFT_R2C:
-       {
-          *plan = new HIPDescriptor<HIPFFT_R2C>(nx,ny);
-          break;
-       }
-       case HIPFFT_C2C:
-       {
-          *plan = new HIPDescriptor<HIPFFT_C2C>(nx,ny);
-          break;
-       }
-       case HIPFFT_D2Z:
-       {
-          *plan = new HIPDescriptor<HIPFFT_D2Z>(nx,ny);
-          break;
-       }
-       case HIPFFT_Z2Z:
-       {
-          *plan = new HIPDescriptor<HIPFFT_Z2Z>(nx,ny);
-          break;
-       }
-       case HIPFFT_C2R:
-       {
-          *plan = new HIPDescriptor<HIPFFT_C2R>(nx,ny);
-          break;
-       }
-       case HIPFFT_Z2D:
-       {
-          *plan = new HIPDescriptor<HIPFFT_Z2D>(nx,ny);
-          break;
-       }
-       default:
-       {
-          *plan = NULL;
-	  result = HIPFFT_INVALID_PLAN;
-	  break;
-       }
-    }
 
 #endif
 

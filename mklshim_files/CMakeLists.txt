@@ -1,69 +1,53 @@
 # Copyright 2021-2023 UT-Battelle
 # See LICENSE.txt in the root of the source distribution for license info.
 
-# Specify how to build the library.
-add_library(MKLShim SHARED
-    Context.cpp
-    Common.cpp
-    Stream.cpp
-    onemklblas.cpp
-    onemklsolver.cpp
-    onemklfft.cpp)
-target_include_directories(MKLShim
-    PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:include>
-    )
-# When defining the library's link interface, ideally we would
-# use MKL::MKL_DPCPP. But then our "clients" will see this 
-# specific target as a dependency.  If those clients are not
-# built with a DPC++ compiler, the MKL CMake import logic won't
-# define the MKL::MKL_DPCPP target making the CMake configuration
-# fail for any of our clients.  To avoid this, we extract
-# the relevant info from the MKL::MKL_DPCPP target and 
-# use that instead of the target itself.  This also reflects
-# our avoidance of using DPC++ in the compiler (see top level
-# CMakeLists.txt for more details).
-get_target_property(MKL_DPCPP_INTERFACE_LINK_LIBS MKL::MKL_DPCPP INTERFACE_LINK_LIBRARIES)
-target_link_libraries(MKLShim
-    PRIVATE
-        MKLShimCommonConfig
-    PUBLIC
-        ${MKL_DPCPP_INTERFACE_LINK_LIBS}
+cmake_minimum_required(VERSION 3.23)
+include (${CMAKE_SOURCE_DIR}/CMake/MKLShimVersion.cmake)
+project(MKLShim
+    VERSION ${MKLShim_VERSION}
+    LANGUAGES CXX)
+
+# Define a target capturing common configuration settings.
+# Although we use 'add_library' for this, it is not a library - 
+# just a CMake target with a collection of properties set the
+# way we want.
+# Unfortunately, it doesn't seem to be possible to set all
+# of the properties we want on this target and have them
+# be inherited by targets that "link" it.
+# In particular, we can't set a few C++ standards properties
+# and so either have to set them globally or on every target.
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+add_library(MKLShimCommonConfig INTERFACE)
+target_compile_features(MKLShimCommonConfig
+    INTERFACE
+        cxx_std_17
     )
 
-# Specify how to install the library.
-include (GNUInstallDirs)
-install(TARGETS MKLShim
-        EXPORT MKLShim
-)
-install(FILES 
-            ${CMAKE_SOURCE_DIR}/include/h4i/mklshim/mklshim.h
-            ${CMAKE_SOURCE_DIR}/include/h4i/mklshim/Context.h
-            ${CMAKE_SOURCE_DIR}/include/h4i/mklshim/Stream.h
-            ${CMAKE_SOURCE_DIR}/include/h4i/mklshim/types.h
-            ${CMAKE_SOURCE_DIR}/include/h4i/mklshim/common.h
-            ${CMAKE_SOURCE_DIR}/include/h4i/mklshim/onemklblas.h
-            ${CMAKE_SOURCE_DIR}/include/h4i/mklshim/onemklsolver.h
-            ${CMAKE_SOURCE_DIR}/include/h4i/mklshim/onemklfft.h
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/h4i/mklshim/
-    )
+# We use the SYCL version of MKL, so ensure that our compiler
+# knows how to compile SYCL.
+# TODO this *only* supports the Intel C++ compiler.
+find_package(IntelSYCL REQUIRED)
+# Note that the current Intel CMake support sets DPC++-related
+# compiler flags that cause the compiler to issue deprecation
+# warnings.  So - strip out the DPC++ flags.
+#string(REPLACE "--dpcpp " "" NEW_SYCL_FLAGS "${SYCL_FLAGS}")
+#set(SYCL_FLAGS ${NEW_SYCL_FLAGS} CACHE STRING "SYCL flags for the compiler" FORCE)
+#string(REPLACE "--dpcpp " "" NEW_CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+#set(CMAKE_CXX_FLAGS ${NEW_CMAKE_CXX_FLAGS})
 
-install(EXPORT MKLShim
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/MKLShim
-    NAMESPACE H4I::
-)
+# We use MKL for implementations of functions we expose.
+if(IntelSYCL_FOUND)
+    # Ensure that when we look for MKL, we import the
+    # support for using its SYCL version.
+    # Despite the name of the variable, we are only
+    # after the SYCL version, not DPC++ support.
+    set(DPCPP_COMPILER ON)
+endif()
+set(MKL_THREADING sequential)
+find_package(MKL CONFIG REQUIRED)
+message(STATUS "Known MKL Targets: ${MKL_IMPORTED_TARGETS}")
 
-include(CMakePackageConfigHelpers)
-
-configure_package_config_file(${CMAKE_SOURCE_DIR}/CMake/MKLShimConfig.cmake.in
-    ${CMAKE_CURRENT_BINARY_DIR}/MKLShimConfig.cmake
-    PATH_VARS CMAKE_INSTALL_INCLUDEDIR
-    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/MKLShim
-)
-
-install(FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/MKLShimConfig.cmake
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/MKLShim
-)
+add_subdirectory(src)
+#add_subdirectory(test)
 
