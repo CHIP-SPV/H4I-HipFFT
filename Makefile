@@ -23,8 +23,8 @@ LDFLAGS += -L/home/ac.nichols/H4I/INSTALLATION/MKLSHIM_WITH_FFT/lib64 -lMKLShim
 LD=icpx
 CXX=icpx
 
-OBJS=hipfft.o
-EXE=hipfft.x
+OBJS=hipfft.o hipfft_test.o
+EXE=hipfft_test.x
 
 ## needed since I'm doing this on my office ubuntu machine without any form of hip installed
 DEFINES=-D__HIP_PLATFORM_SPIRV__

@@ -19,23 +19,28 @@ namespace H4I::MKLShim
   //
   // also, structs are defined for the four possible combinations of 
   // precision (Single or Double) and starting domain (Real or Complex)
-  //
+
   // struct for the Single precision and Real starting domain descriptor
   struct fftDescriptorSR
   {
+      // descriptor for 1d transforms
       fftDescriptorSR(Context* ctxt, std::int64_t length) : fft_plan(length)
       {
-          // test variable ... will be removed
-          stuff = 1.0;
-
 	  // commit the plan
 	  fft_plan.commit(ctxt->queue);
-
 	  // wait for everything to complete before continuing
 	  ctxt->queue.wait();
       }
 
-      float stuff;
+      // descriptor for multi-dimensional transforms
+      fftDescriptorSR(Context* ctxt, std::vector<std::int64_t> dimensions) : fft_plan(dimensions)
+      {
+          // commit the plan
+          fft_plan.commit(ctxt->queue);
+          // wait for everything to complete before continuing
+          ctxt->queue.wait();
+      }
+
       oneapi::mkl::dft::descriptor<oneapi::mkl::dft::precision::SINGLE,
                                    oneapi::mkl::dft::domain::REAL> fft_plan;
       
@@ -45,18 +50,24 @@ namespace H4I::MKLShim
   // struct for the Single precision and Complex starting domain descriptor
   struct fftDescriptorSC
   {
+      // descriptor for 1d transforms
       fftDescriptorSC(Context* ctxt, std::int64_t length) : fft_plan(length)
       {
-          stuff = 1.0;
-
           // commit the plan
           fft_plan.commit(ctxt->queue);
-
           // wait for everything to complete before continuing
           ctxt->queue.wait();
       }
 
-      float _Complex stuff;
+      // descriptor for multi-dimensional transforms
+      fftDescriptorSC(Context* ctxt, std::vector<std::int64_t> dimensions) : fft_plan(dimensions)
+      {
+          // commit the plan
+          fft_plan.commit(ctxt->queue);
+          // wait for everything to complete before continuing
+          ctxt->queue.wait();
+      }
+
       oneapi::mkl::dft::descriptor<oneapi::mkl::dft::precision::SINGLE,
                                    oneapi::mkl::dft::domain::COMPLEX> fft_plan;
 
@@ -66,18 +77,24 @@ namespace H4I::MKLShim
   // struct for the Double precision and Real starting domain descriptor
   struct fftDescriptorDR
   {
+      // descriptor for 1d transforms
       fftDescriptorDR(Context* ctxt, std::int64_t length) : fft_plan(length)
       {
-          stuff = 1.0;
-
           // commit the plan
           fft_plan.commit(ctxt->queue);
-
           // wait for everything to complete before continuing
           ctxt->queue.wait();
       }
 
-      double stuff;
+      // descriptor for multi-dimensional transforms
+      fftDescriptorDR(Context* ctxt, std::vector<std::int64_t> dimensions) : fft_plan(dimensions)
+      {
+          // commit the plan
+          fft_plan.commit(ctxt->queue);
+          // wait for everything to complete before continuing
+          ctxt->queue.wait();
+      }
+
       oneapi::mkl::dft::descriptor<oneapi::mkl::dft::precision::DOUBLE,
                                    oneapi::mkl::dft::domain::REAL> fft_plan;
 
@@ -87,18 +104,24 @@ namespace H4I::MKLShim
   // struct for the Double precision and Complex starting domain descriptor
   struct fftDescriptorDC
   {
+      // descriptor for 1d transforms
       fftDescriptorDC(Context* ctxt, std::int64_t length) : fft_plan(length)
       {
-          stuff = 1.0;
-
           // commit the plan
           fft_plan.commit(ctxt->queue);
-
           // wait for everything to complete before continuing
           ctxt->queue.wait();
       }
 
-      double _Complex stuff;
+      // descriptor for multi-dimensional transforms
+      fftDescriptorDC(Context* ctxt, std::vector<std::int64_t> dimensions) : fft_plan(dimensions)
+      {
+          // commit the plan
+          fft_plan.commit(ctxt->queue);
+          // wait for everything to complete before continuing
+          ctxt->queue.wait();
+      }
+
       oneapi::mkl::dft::descriptor<oneapi::mkl::dft::precision::DOUBLE,
                                    oneapi::mkl::dft::domain::COMPLEX> fft_plan;
 
@@ -106,13 +129,14 @@ namespace H4I::MKLShim
   };
 
 
-  // some simple checks
+  // simple queue check ... will be removed
   void checkFFTQueue(Context* ctxt) {
      std::cout << "in checkFFTQueue : device info =  " << 
 	     ctxt->queue.get_device().get_info<sycl::info::device::name>() << std::endl;
      return;
   }
 
+  // simple plan check for the SR plan ... will be removed
   void checkFFTPlan(Context *ctxt, fftDescriptorSR *desc)
   {
      // ctxt->queue.wait();
@@ -133,34 +157,23 @@ namespace H4I::MKLShim
   }
 
   // create the fft descriptors
-  fftDescriptorSR* createFFTDescriptorSR(Context* ctxt, int64_t nx) {
-     
-     auto d = new fftDescriptorSR(ctxt, nx);
-     // std::cout << "in createDescriptor : stuff = " << d->stuff << std::endl;
-     // d->stuff = 4.0;
-     // std::cout << "in createDescriptor : stuff = " << d->stuff << std::endl;
-
+  fftDescriptorSR* createFFTDescriptorSR(Context* ctxt, int64_t length) {
+     auto d = new fftDescriptorSR(ctxt, length);
      return d;
   }
 
-  fftDescriptorSC* createFFTDescriptorSC(Context* ctxt, int64_t nx) {
-
-     auto d = new fftDescriptorSC(ctxt, nx);
-
+  fftDescriptorSC* createFFTDescriptorSC(Context* ctxt, int64_t length) {
+     auto d = new fftDescriptorSC(ctxt, length);
      return d;
   }
 
-  fftDescriptorDR* createFFTDescriptorDR(Context* ctxt, int64_t nx) {
-
-     auto d = new fftDescriptorDR(ctxt, nx);
-
+  fftDescriptorDR* createFFTDescriptorDR(Context* ctxt, int64_t length) {
+     auto d = new fftDescriptorDR(ctxt, length);
      return d;
   }
 
-  fftDescriptorDC* createFFTDescriptorDC(Context* ctxt, int64_t nx) {
-
-     auto d = new fftDescriptorDC(ctxt, nx);
-
+  fftDescriptorDC* createFFTDescriptorDC(Context* ctxt, int64_t length) {
+     auto d = new fftDescriptorDC(ctxt, length);
      return d;
   }
 
