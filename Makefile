@@ -18,6 +18,7 @@ LDFLAGS += -L$(MKL_ROOT)/lib/intel64 -lmkl_sycl -lmkl_core -lmkl_intel_thread -l
 
 #LDFLAGS += -L$(HIP_PATH)/lib -lCHIP
 LDFLAGS += -L$(HIP_PATH)/lib64 -lCHIP
+LDFLAGS += -Wl,-rpath,/home/ac.nichols/H4I/INSTALLATION/MKLSHIM_WITH_FFT/lib64
 LDFLAGS += -L/home/ac.nichols/H4I/INSTALLATION/MKLSHIM_WITH_FFT/lib64 -lMKLShim
 
 LD=icpx
