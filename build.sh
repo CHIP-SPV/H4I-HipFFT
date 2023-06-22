@@ -3,7 +3,7 @@
 # set the env
 #source setUpModules.sh
 
-make -f Makefile clean
+make -f Makefile realclean
 make -f Makefile
 
 ldd ./hipfft_test.x

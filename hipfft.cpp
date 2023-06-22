@@ -129,6 +129,15 @@ void checkPlan(hipfftHandle plan)
     return;
 }
 
+// will be removed
+void testPlan(hipfftHandle plan, int Nbytes, hipfftReal* idata, hipfftReal* odata)
+{
+    // H4I::MKLShim::testFFTPlan(plan->ctxt, plan->descSR, Nbytes, idata, odata);
+    H4I::MKLShim::testFFTPlan(plan->ctxt, plan->descSR, Nbytes, idata);
+
+    return;
+}
+
 
 hipfftResult hipfftPlan2d(hipfftHandle *plan,
                           int nx,
@@ -178,28 +187,46 @@ hipfftResult hipfftPlan2d(hipfftHandle *plan,
     return result;
 }
 
-
-hipfftResult hipfftExecR2C(hipfftHandle plan, hipfftReal *idata, hipfftComplex *odata)
+hipfftResult hipfftExecR2C(hipfftHandle plan, hipfftReal* idata, hipfftComplex* odata)
 {
-    std::cout << "In ExecR2C " << std::endl;
-    // return plan->hipfftExecR2C_impl(idata, odata);
+    // std::cout << "In ExecR2C " << std::endl;
+    H4I::MKLShim::fftExecR2C(plan->ctxt, plan->descSR, idata, (float _Complex *)odata);
+    // std::cout << "leaving hipfftExecR2C " << std::endl;
     return HIPFFT_SUCCESS;
 }
 
-hipfftResult hipfftExecC2R(hipfftHandle plan, hipfftComplex *idata, hipfftReal *odata)
+hipfftResult hipfftExecC2R(hipfftHandle plan, hipfftComplex* idata, hipfftReal* odata)
 {
-    std::cout << "In ExecC2R " << std::endl;
-    // return plan->hipfftExecC2R_impl(idata, odata);
+    // std::cout << "In ExecC2R " << std::endl;
+    H4I::MKLShim::fftExecC2R(plan->ctxt, plan->descSR, (float _Complex *)idata, odata);
     return HIPFFT_SUCCESS;
 }
 
-hipfftResult hipfftExecC2C(hipfftHandle   plan,
-                                         hipfftComplex* idata,
-                                         hipfftComplex* odata,
-                                         int            direction)
+#if 0
+hipfftResult hipfftExecC2C(hipfftHandle plan,
+                           hipfftComplex* idata,
+                           hipfftComplex* odata,
+                           int direction)
 {
     std::cout << "In ExecC2C " << std::endl;
-    // return plan->hipfftExecC2C_impl(idata, odata, direction);
+
+    int _direction;
+    switch (direction)
+    {
+        case HIPFFT_FORWARD:
+        {
+            _direction = 0; 
+            break;
+        }
+        case HIPFFT_BACKWARD:
+        {
+            _direction = 1;
+            break;
+        }
+    }
+
+    // H4I::MKLShim::fftExecC2C(plan->ctxt, plan->descSC, (float _Complex *)idata, (float _Complex *)odata, _direction);
     return HIPFFT_SUCCESS;
 };
+#endif
 

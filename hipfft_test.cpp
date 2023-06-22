@@ -10,6 +10,7 @@
 // #include "hip/hip_interop.h"
 
 void checkPlan(hipfftHandle plan);
+void testPlan(hipfftHandle plan, int Nbytes, float* idata, float* odata);
 
 int main(int argc, char **argv)
 {
@@ -36,8 +37,8 @@ int main(int argc, char **argv)
     // std::cout << " plan_r2c scale factor = " << plan_r2c->scale_factor << std::endl;
     // std::cout << " plan_c2r scale factor = " << plan_c2r->scale_factor << std::endl;
 
-    checkPlan(plan_r2c);
-    checkPlan(plan_c2r);
+    // checkPlan(plan_r2c);
+    // checkPlan(plan_c2r);
 
     // local memory
     float *cx = NULL;
@@ -95,10 +96,12 @@ int main(int argc, char **argv)
       {
 	result = hipfftExecR2C(plan_r2c, (hipfftReal*)x, (hipfftComplex*)x);
       }
+#endif
 
     // Wait for execution to finish
     hip_error = hipDeviceSynchronize();
 
+#if 1
     // compute the inverse transform
     if (not_in_place)
       {
@@ -113,6 +116,8 @@ int main(int argc, char **argv)
     // Wait for execution to finish
     hip_error = hipDeviceSynchronize();
 
+    // testPlan(plan_r2c, Nbytes, (hipfftReal*)x, (hipfftReal*)cy);
+
     // Copy result back to host
     hip_error = hipMemcpy(cy, x, Nbytes, hipMemcpyHostToDevice);
 
@@ -125,7 +130,7 @@ int main(int argc, char **argv)
     for (int i = 0; i < nx; i++)
       {
         // rescale cy to account for the scaling applied during the fft transforms
-        // cy[i] /= anx;
+        cy[i] /= anx;
 
         local_error = fabs(cx[i] - cy[i]);
         if (local_error > max_error) max_error = local_error;
