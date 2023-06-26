@@ -22,10 +22,13 @@ namespace H4I::MKLShim
 
   void fftExecR2C(Context *ctxt, fftDescriptorSR *descSR, float *idata, float _Complex *odata);
   void fftExecC2R(Context *ctxt, fftDescriptorSR *descSR, float _Complex *idata, float *odata);
-  void fftExecC2C(Context *ctxt, 
-		  fftDescriptorSC *descSC, 
-		  float _Complex *idata, 
-		  float _Complex *odata, 
-		  const int direction);
+  void fftExecC2Cforward(Context *ctxt, 
+		         fftDescriptorSC *descSC, 
+		         float _Complex *idata, 
+		         float _Complex *odata);
+  void fftExecC2Cbackward(Context *ctxt, 
+                          fftDescriptorSC *descSC,
+                          float _Complex *idata,
+                          float _Complex *odata);
 
 } // namespace

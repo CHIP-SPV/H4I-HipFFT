@@ -240,21 +240,20 @@ hipfftResult hipfftExecC2R(hipfftHandle plan, hipfftComplex* idata, hipfftReal* 
 hipfftResult hipfftExecC2C(hipfftHandle plan,
                            hipfftComplex* idata,
                            hipfftComplex* odata,
-                           int _direction)
+                           int direction)
 {
-    int direction;
     hipfftResult result = HIPFFT_SUCCESS;
 
-    switch (_direction)
+    switch (direction)
     {
         case HIPFFT_FORWARD:
         {
-            direction = 0; 
+            H4I::MKLShim::fftExecC2Cforward(plan->ctxt, plan->descSC, (float _Complex *)idata, (float _Complex *)odata); 
             break;
         }
         case HIPFFT_BACKWARD:
         {
-            direction = 1;
+            H4I::MKLShim::fftExecC2Cbackward(plan->ctxt, plan->descSC, (float _Complex *)idata, (float _Complex *)odata);
             break;
         }
 	default:
@@ -264,7 +263,6 @@ hipfftResult hipfftExecC2C(hipfftHandle plan,
         }
     }
 
-    H4I::MKLShim::fftExecC2C(plan->ctxt, plan->descSC, (float _Complex *)idata, (float _Complex *)odata, direction);
     return result;
 };
 
