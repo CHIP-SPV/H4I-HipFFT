@@ -26,8 +26,8 @@ LDFLAGS += -L/home/ac.nichols/H4I/INSTALLATION/H4I-HIPFFT/lib -lhipfft
 LD=icpx
 CXX=icpx
 
-OBJS=hipfft_test.o
-EXE=hipfft_test.x
+OBJS=hipfft_1d.o
+EXE=hipfft_1d.x
 
 ## needed since I'm doing this on my office ubuntu machine without any form of hip installed
 DEFINES=-D__HIP_PLATFORM_SPIRV__

@@ -6,4 +6,4 @@
 make -f Makefile realclean
 make -f Makefile
 
-ldd ./hipfft_test.x
+ldd ./hipfft_1d.x

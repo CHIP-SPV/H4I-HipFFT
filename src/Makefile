@@ -50,4 +50,4 @@ clean:
 
 realclean:
 	make clean
-	rm -f *.mod *.s *~ include/*~
+	rm -f *.mod *.s *~ $(LIBNAME)
