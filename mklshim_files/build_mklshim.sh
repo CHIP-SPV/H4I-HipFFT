@@ -4,12 +4,21 @@ echo $CC
 echo $CXX
 
 export BASE_DIR=${PWD}
-#export INSTALL_DIR="/home/ac.nichols/H4I/INSTALLATION/MKLSHIM/SYCL"
-export INSTALL_DIR="/home/ac.nichols/H4I/INSTALLATION/MKLSHIM_WITH_FFT"
+#export INSTALL_DIR="/home/ac.nichols/H4I/INSTALLATION/MKLSHIM_WITH_FFT"
+export INSTALL_DIR="/home/ac.nichols/H4I/INSTALLATION/MKLSHIM_DEVELOP"
 
 echo ${BASE_DIR}
 
-cd master-H4I-MKLShim
+if [ ! -d "H4I-MKLShim" ]; then
+   git clone https://github.com/CHIP-SPV/H4I-MKLShim.git
+   cd H4I-MKLShim
+   git checkout develop
+   cd ../
+fi
+
+#exit
+
+cd H4I-MKLShim
 
 if [ ! -d "build" ]; then
    mkdir build
@@ -23,7 +32,6 @@ pwd
 
 
 # needed to find CL/sycl.hpp
-#export INCDIR="-I${CMPROOT}/linux/include -I${CMPROOT}/linux/include/sycl"
 export INCDIR="-I${CMPROOT}/linux/include/sycl"
 
 cmake ../ \
