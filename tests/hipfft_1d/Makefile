@@ -8,7 +8,7 @@ INCLUDE_PATH =
 
 ## needed to find the local headers (such as hipfft.h and descriptor.hpp)
 INCLUDE_PATH += -I/home/ac.nichols/H4I/INSTALLATION/H4I-HIPFFT/include
-INCLUDE_PATH += -I/home/ac.nichols/H4I/INSTALLATION/MKLSHIM_WITH_FFT/include
+INCLUDE_PATH += -I/home/ac.nichols/H4I/INSTALLATION/MKLSHIM_DEVELOP/include
 
 ## I think libmkl_intel_lp64 allows 32 bit ints but libmkl_intel_ilp64 requires
 ## 64 bit ints ... key word here is "think" ... need to read the intel docs again
@@ -18,8 +18,8 @@ LDFLAGS += -L$(MKL_ROOT)/lib/intel64 -lmkl_sycl -lmkl_core -lmkl_intel_thread -l
 
 #LDFLAGS += -L$(HIP_PATH)/lib -lCHIP
 LDFLAGS += -L$(HIP_PATH)/lib64 -lCHIP
-LDFLAGS += -Wl,-rpath,/home/ac.nichols/H4I/INSTALLATION/MKLSHIM_WITH_FFT/lib64
-LDFLAGS += -L/home/ac.nichols/H4I/INSTALLATION/MKLSHIM_WITH_FFT/lib64 -lMKLShim
+LDFLAGS += -Wl,-rpath,/home/ac.nichols/H4I/INSTALLATION/MKLSHIM_DEVELOP/lib64
+LDFLAGS += -L/home/ac.nichols/H4I/INSTALLATION/MKLSHIM_DEVELOP/lib64 -lMKLShim
 LDFLAGS += -Wl,-rpath,/home/ac.nichols/H4I/INSTALLATION/H4I-HIPFFT/lib
 LDFLAGS += -L/home/ac.nichols/H4I/INSTALLATION/H4I-HIPFFT/lib -lhipfft
 

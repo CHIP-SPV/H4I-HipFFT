@@ -49,27 +49,17 @@ struct Context;
   } onemklJob;
 
   typedef enum {
-      ONEMKL_TRANSPOSE_NONTRANS,
-      ONEMKL_TRANSPOSE_TRANS,
-      ONEMLK_TRANSPOSE_CONJTRANS
+    ONEMKL_TRANSPOSE_NONTRANS,
+    ONEMKL_TRANSPOSE_TRANS,
+    ONEMLK_TRANSPOSE_CONJTRANS
   } onemklTranspose;
 
 // keep track of the four combinations of
-// precision (Single or Double) and 
+// mkl fft precision (Single or Double) and 
 // starting domain (Real or Complex)
 struct fftDescriptorSR;
 struct fftDescriptorSC;
 struct fftDescriptorDR;
 struct fftDescriptorDC;
-
-  typedef enum {
-      ONEMKL_FFT_SINGLE,
-      ONEMKL_FFT_DOUBLE
-  } onemklFFTprecision;
-
-  typedef enum {
-      ONEMKL_FFT_REAL,
-      ONEMKL_FFT_COMPLEX
-  } onemklFFTdomain;
 
 } // namespace
