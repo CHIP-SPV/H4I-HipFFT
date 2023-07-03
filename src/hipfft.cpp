@@ -146,7 +146,7 @@ hipfftResult hipfftPlan2d(hipfftHandle *plan,
                           hipfftType type)
 {
     hipfftResult result = HIPFFT_SUCCESS;
-#if 0
+
     if ((nx > 0) && (ny > 0))
     {
         // local handle
@@ -156,7 +156,7 @@ hipfftResult hipfftPlan2d(hipfftHandle *plan,
         result = hipfftCreate(&h);
 
         // call hipfftMakePlan2d to create the descriptor
-        result = hipfftMakePlan2d(h, nx, ny, type, batch, nullptr);
+        result = hipfftMakePlan2d(h, nx, ny, type, nullptr);
 
         // set plan
         *plan = h;
@@ -166,7 +166,7 @@ hipfftResult hipfftPlan2d(hipfftHandle *plan,
         *plan = nullptr;
         result = HIPFFT_INVALID_VALUE;
     }
-#endif
+
     return result;
 }
 
@@ -184,7 +184,6 @@ hipfftResult hipfftMakePlan2d(hipfftHandle plan,
     //       but I think intel follows the same convention as hipfft
     std::vector<std::int64_t> dimensions {(int64_t)nx, (int64_t)ny};
 
-#if 0
     // create the appropriate descriptor for the fft plan
     switch (type)
     {
@@ -220,7 +219,6 @@ hipfftResult hipfftMakePlan2d(hipfftHandle plan,
           break;
        }
     }
-#endif
 
     return result;
 }

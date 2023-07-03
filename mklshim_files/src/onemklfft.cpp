@@ -238,7 +238,7 @@ namespace H4I::MKLShim
       return;
   }
 
-  // create the fft descriptors
+  // create the 1d fft descriptors
   fftDescriptorSR* createFFTDescriptorSR(Context* ctxt, int64_t length) {
      auto d = new fftDescriptorSR(ctxt, length);
      return d;
@@ -259,6 +259,28 @@ namespace H4I::MKLShim
      return d;
   }
 
+  // create the multi-dimensional fft descriptors
+  fftDescriptorSR* createFFTDescriptorSR(Context* ctxt, std::vector<std::int64_t> dimensions) {
+     auto d = new fftDescriptorSR(ctxt, dimensions);
+     return d;
+  }
+
+  fftDescriptorSC* createFFTDescriptorSC(Context* ctxt, std::vector<std::int64_t> dimensions) {
+     auto d = new fftDescriptorSC(ctxt, dimensions);
+     return d;
+  }
+
+  fftDescriptorDR* createFFTDescriptorDR(Context* ctxt, std::vector<std::int64_t> dimensions) {
+     auto d = new fftDescriptorDR(ctxt, dimensions);
+     return d;
+  }
+
+  fftDescriptorDC* createFFTDescriptorDC(Context* ctxt, std::vector<std::int64_t> dimensions) {
+     auto d = new fftDescriptorDC(ctxt, dimensions);
+     return d;
+  }
+
+  // execute the plans
   void fftExecR2C(Context *ctxt, fftDescriptorSR *descSR, float *idata, float _Complex *odata)
   {
       ctxt->queue.wait();
@@ -269,7 +291,7 @@ namespace H4I::MKLShim
       
       if (idata == (float*)odata)
       {
-	  std::cout << "in fftExecR2C : in-place transform " << std::endl;
+	  // std::cout << "in fftExecR2C : in-place transform " << std::endl;
 
           if (value != DFTI_INPLACE)
           {
@@ -286,7 +308,7 @@ namespace H4I::MKLShim
       }
       else
       {
-          std::cout << "in fftExecR2C : not-in-place transform " << std::endl;
+          // std::cout << "in fftExecR2C : not-in-place transform " << std::endl;
 
           if (value != DFTI_NOT_INPLACE)
           {
@@ -318,7 +340,7 @@ namespace H4I::MKLShim
 
       if ((float*)idata == odata)
       {
-          std::cout << "in fftExecC2R : in-place transform " << std::endl;
+          // std::cout << "in fftExecC2R : in-place transform " << std::endl;
 
           if (value != DFTI_INPLACE)
           {
@@ -335,7 +357,7 @@ namespace H4I::MKLShim
       }
       else
       {
-          std::cout << "in fftExecC2R : not-in-place transform " << std::endl;
+          // std::cout << "in fftExecC2R : not-in-place transform " << std::endl;
 
           if (value != DFTI_NOT_INPLACE)
           {
@@ -371,7 +393,7 @@ namespace H4I::MKLShim
 
       if (idata == odata)
       {
-          std::cout << "in fftExecC2R : in-place transform " << std::endl;
+          // std::cout << "in fftExecC2C_fwd : in-place transform " << std::endl;
 
           if (value != DFTI_INPLACE)
           {
@@ -389,7 +411,7 @@ namespace H4I::MKLShim
       }
       else
       {
-          std::cout << "in fftExecC2R : not-in-place transform " << std::endl;
+          // std::cout << "in fftExecC2C_fwd : not-in-place transform " << std::endl;
 
           if (value != DFTI_NOT_INPLACE)
           {
@@ -424,7 +446,7 @@ namespace H4I::MKLShim
 
       if (idata == odata)
       {
-          std::cout << "in fftExecC2R : in-place transform " << std::endl;
+          // std::cout << "in fftExecC2C_bwd : in-place transform " << std::endl;
 
           if (value != DFTI_INPLACE)
           {
@@ -442,7 +464,7 @@ namespace H4I::MKLShim
       }
       else
       {
-          std::cout << "in fftExecC2R : not-in-place transform " << std::endl;
+          // std::cout << "in fftExecC2C_bwd : not-in-place transform " << std::endl;
 
           if (value != DFTI_NOT_INPLACE)
           {
@@ -463,6 +485,37 @@ namespace H4I::MKLShim
       ctxt->queue.wait();
 
       return;
+  }
+
+  // execute the plans
+  void fftExecD2Z(Context *ctxt, fftDescriptorDR *descDR, double *idata, double _Complex *odata)
+  {
+      ctxt->queue.wait();
+      return;
+  }
+
+  void fftExecZ2D(Context *ctxt, fftDescriptorDR *descDR, double _Complex *idata, double *odata)
+  {
+      ctxt->queue.wait();
+      return;
+  }
+
+  void fftExecZ2Zforward(Context *ctxt,
+                         fftDescriptorDC *descDC,
+                         double _Complex *idata,
+                         double _Complex *odata)
+  {
+      ctxt->queue.wait();
+      return;
+  }
+
+  void fftExecZ2Zbackward(Context *ctxt,
+                          fftDescriptorDC *descDC,
+                          double _Complex *idata,
+                          double _Complex *odata)
+  {
+      ctxt->queue.wait();
+      return; 
   }
 
 
