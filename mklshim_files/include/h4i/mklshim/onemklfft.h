@@ -24,6 +24,13 @@ namespace H4I::MKLShim
   fftDescriptorDR* createFFTDescriptorDR(Context *ctxt, std::vector<std::int64_t> dimensions);
   fftDescriptorDC* createFFTDescriptorDC(Context *ctxt, std::vector<std::int64_t> dimensions);
 
+  // destroy descriptors
+  void destroyFFTDescriptorSR(Context *ctxt, fftDescriptorSR *descSR);
+  void destroyFFTDescriptorSC(Context *ctxt, fftDescriptorSC *descSC);
+  void destroyFFTDescriptorDR(Context *ctxt, fftDescriptorDR *descDR);
+  void destroyFFTDescriptorDC(Context *ctxt, fftDescriptorDC *descDC);
+  
+
   // Single precision, Real starting domain
   void fftExecR2C(Context *ctxt, fftDescriptorSR *descSR, float *idata, float _Complex *odata);
   void fftExecC2R(Context *ctxt, fftDescriptorSR *descSR, float _Complex *idata, float *odata);

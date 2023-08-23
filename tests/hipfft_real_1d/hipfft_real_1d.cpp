@@ -150,8 +150,28 @@ int main(int argc, char **argv)
        hip_error = hipFree(y);
       }
 
+    // destroy the plan
+    result = hipfftDestroy(plan_r2c);
+    result = hipfftDestroy(plan_c2r);
+
     // make sure Q is finished
     hip_error = hipDeviceSynchronize();
+
+#if 0
+    // we should be able to reuse the plan handle now
+    result = hipfftCreate(&plan_r2c);
+    result = hipfftCreate(&plan_c2r);
+
+    // make sure Q is finished
+    hip_error = hipDeviceSynchronize();
+
+    // destroy the plan
+    result = hipfftDestroy(plan_r2c);
+    result = hipfftDestroy(plan_c2r);
+
+    // make sure Q is finished
+    hip_error = hipDeviceSynchronize();
+#endif
 
     std::cout << "FINISHED!" << std::endl;
 

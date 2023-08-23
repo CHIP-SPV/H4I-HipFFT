@@ -1,17 +1,21 @@
 #!/bin/bash
 
+#source setUpModules.sh
+
 echo $CC
 echo $CXX
 
+#exit
+
 export BASE_DIR=${PWD}
-#export INSTALL_DIR="/home/ac.nichols/H4I/INSTALLATION/MKLSHIM_WITH_FFT"
-export INSTALL_DIR="/home/ac.nichols/H4I/INSTALLATION/MKLSHIM_DEVELOP"
+export INSTALL_DIR="/home/nicholsds/FROM_CHIPSTAR/INSTALLATION/MKLSHIM_DEVELOP"
 
 echo ${BASE_DIR}
 
 if [ ! -d "H4I-MKLShim" ]; then
    git clone https://github.com/CHIP-SPV/H4I-MKLShim.git
    cd H4I-MKLShim
+   #git checkout develop.fix_context
    git checkout develop
    cd ../
 fi

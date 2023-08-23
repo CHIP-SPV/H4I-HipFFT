@@ -1,0 +1,7 @@
+#pragma once
+
+#define hipfftVersionMajor @PROJECT_VERSION_MAJOR@
+#define hipfftVersionMinor @PROJECT_VERSION_MINOR@
+#define hipfftVersionPatch @PROJECT_VERSION_PATCH@
+#define hipfftVersionTweak 0 // We don't use a tweak
+

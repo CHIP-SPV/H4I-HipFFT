@@ -37,6 +37,46 @@ hipfftResult hipfftCreate(hipfftHandle *plan)
     return (*plan != nullptr) ? HIPFFT_SUCCESS : HIPFFT_INVALID_VALUE;
 }
 
+hipfftResult hipfftDestroy(hipfftHandle plan)
+{
+    if(plan != nullptr)
+    {
+        hipError_t error = hipSuccess;
+
+        // clean-up workBuffer
+        if (plan->workBuffer != nullptr) error = hipFree(plan->workBuffer);
+
+        // clean-up ddescriptors
+        if (plan->descSR != nullptr) 
+        {
+           H4I::MKLShim::destroyFFTDescriptorSR(plan->ctxt,plan->descSR);
+        }
+
+        if (plan->descSC != nullptr)
+        {
+           H4I::MKLShim::destroyFFTDescriptorSC(plan->ctxt,plan->descSC);
+        }
+
+        if (plan->descDR != nullptr)
+        {
+           H4I::MKLShim::destroyFFTDescriptorDR(plan->ctxt,plan->descDR);
+        }
+
+        if (plan->descDC != nullptr)
+        {
+           H4I::MKLShim::destroyFFTDescriptorDC(plan->ctxt,plan->descDC);
+        }
+
+        // destroy ctxt
+        H4I::MKLShim::Destroy(plan->ctxt);
+
+        // final clean-up
+        delete plan;
+    }
+
+    return HIPFFT_SUCCESS;
+}
+
 
 hipfftResult hipfftPlan1d(hipfftHandle *plan,
                           int nx,
@@ -223,6 +263,149 @@ hipfftResult hipfftMakePlan2d(hipfftHandle plan,
     return result;
 }
 
+hipfftResult hipfftPlan3d(hipfftHandle *plan,
+                          int nx,  // slowest hipfft index
+                          int ny, 
+                          int nz,  // fastest hipfft index
+                          hipfftType type)
+{
+    hipfftResult result = HIPFFT_SUCCESS;
+
+    if ((nx > 0) && (ny > 0) && (nz > 0))
+    {
+        // local handle
+        hipfftHandle h = nullptr;
+
+        // create a new handle
+        result = hipfftCreate(&h);
+
+        // call hipfftMakePlan2d to create the descriptor
+        result = hipfftMakePlan3d(h, nx, ny, nz, type, nullptr);
+
+        // set plan
+        *plan = h;
+    }
+    else
+    {
+        *plan = nullptr;
+        result = HIPFFT_INVALID_VALUE;
+    }
+
+    return result;
+}
+
+hipfftResult hipfftMakePlan3d(hipfftHandle plan,
+                          int nx,  // slowest hipfft index
+                          int ny,
+                          int nz,  // fastest hipfft index
+                          hipfftType type,
+                          size_t *workSize)
+{
+    hipfftResult result = HIPFFT_SUCCESS;
+
+    // define the dimensions vector
+    // NOTE: may need to swap these ... need to look at the intel docs, 
+    //       but I think intel follows the same convention as hipfft
+    std::vector<std::int64_t> dimensions {(int64_t)nx, (int64_t)ny, (int64_t)nz};
+
+    // create the appropriate descriptor for the fft plan
+    switch (type)
+    {
+       case HIPFFT_R2C:
+       case HIPFFT_C2R:
+       {
+          auto *desc = H4I::MKLShim::createFFTDescriptorSR(plan->ctxt,dimensions);
+          plan->descSR = desc;
+          break;
+       }
+       case HIPFFT_D2Z:
+       case HIPFFT_Z2D:
+       {
+          auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,dimensions);
+          plan->descDR = desc;
+          break;
+       }
+       case HIPFFT_C2C:
+       {
+          auto *desc = H4I::MKLShim::createFFTDescriptorSC(plan->ctxt,dimensions);
+          plan->descSC = desc;
+          break;
+       }
+       case HIPFFT_Z2Z:
+       {
+          auto *desc = H4I::MKLShim::createFFTDescriptorDC(plan->ctxt,dimensions);
+          plan->descDC = desc;
+          break;
+       }
+       default:
+       {
+          result = HIPFFT_INVALID_PLAN;
+          break;
+       }
+    }
+
+    return result;
+}
+
+hipfftResult hipfftPlanMany(hipfftHandle* plan,
+                            int           rank,
+                            int*          n,
+                            int*          inembed,
+                            int           istride,
+                            int           idist,
+                            int*          onembed,
+                            int           ostride,
+                            int           odist,
+                            hipfftType    type,
+                            int           batch)
+{
+    hipfftResult result = HIPFFT_SUCCESS;
+
+    if ((rank > 0) && (istride > 0) && (idist > 0) && 
+        (ostride > 0) && (odist > 0) && (batch > 0) &&
+        (n != nullptr) && (inembed != nullptr) && (onembed != nullptr))
+    {
+        // local handle
+        hipfftHandle h = nullptr;
+
+        // create a new handle
+        result = hipfftCreate(&h);
+
+        // call hipfftMakePlan2d to create the descriptor
+        result = hipfftMakePlanMany(h, rank, n, 
+                                    inembed, istride, idist, 
+                                    onembed, ostride, odist, 
+                                    type, batch, nullptr);
+
+        // set plan
+        *plan = h;
+    }
+    else
+    {
+        *plan = nullptr;
+        result = HIPFFT_INVALID_VALUE;
+    }
+
+    return result;
+}
+
+hipfftResult hipfftMakePlanMany(hipfftHandle plan,
+                                int          rank,
+                                int*         n,
+                                int*         inembed,
+                                int          istride,
+                                int          idist,
+                                int*         onembed,
+                                int          ostride,
+                                int          odist,
+                                hipfftType   type,
+                                int          batch,
+                                size_t*      workSize)
+{
+    hipfftResult result = HIPFFT_SUCCESS;
+    return result;
+}
+
 hipfftResult hipfftExecR2C(hipfftHandle plan, hipfftReal* idata, hipfftComplex* odata)
 {
     H4I::MKLShim::fftExecR2C(plan->ctxt, plan->descSR, idata, (float _Complex *)odata);
@@ -258,6 +441,47 @@ hipfftResult hipfftExecC2C(hipfftHandle plan,
         {
             result = HIPFFT_INVALID_VALUE;
 	    return result;
+        }
+    }
+
+    return result;
+};
+
+hipfftResult hipfftExecD2Z(hipfftHandle plan, hipfftDoubleReal* idata, hipfftDoubleComplex* odata)
+{
+    H4I::MKLShim::fftExecD2Z(plan->ctxt, plan->descDR, idata, (double _Complex *)odata);
+    return HIPFFT_SUCCESS;
+}
+
+hipfftResult hipfftExecZ2D(hipfftHandle plan, hipfftDoubleComplex* idata, hipfftDoubleReal* odata)
+{
+    H4I::MKLShim::fftExecZ2D(plan->ctxt, plan->descDR, (double _Complex *)idata, odata);
+    return HIPFFT_SUCCESS;
+}
+
+hipfftResult hipfftExecZ2Z(hipfftHandle plan,
+                           hipfftDoubleComplex* idata,
+                           hipfftDoubleComplex* odata,
+                           int direction)
+{
+    hipfftResult result = HIPFFT_SUCCESS;
+
+    switch (direction)
+    {
+        case HIPFFT_FORWARD:
+        {
+            H4I::MKLShim::fftExecZ2Zforward(plan->ctxt, plan->descDC, (double _Complex *)idata, (double _Complex *)odata);
+            break;
+        }
+        case HIPFFT_BACKWARD:
+        {
+            H4I::MKLShim::fftExecZ2Zbackward(plan->ctxt, plan->descDC, (double _Complex *)idata, (double _Complex *)odata);
+            break;
+        }
+        default:
+        {
+            result = HIPFFT_INVALID_VALUE;
+            return result;
         }
     }
 

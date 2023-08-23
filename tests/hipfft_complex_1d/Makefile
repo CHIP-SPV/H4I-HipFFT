@@ -1,14 +1,12 @@
 INCLUDE_PATH =
 
-## uncomment if you do NOT have any of the intel env defined either with
-## intel's setvars.sh script (see my setUpModules.sh script) or with 
-## JLSE's CNDA oneapi module (non-CNDA still needs to set
-## intel env via setvars.sh or uncomment this line if I remember correctly)
+## uncomment if you do NOT have any of the intel env defined
 #INCLUDE_PATH += -I$(MKL_ROOT)/include
 
 ## needed to find the local headers (such as hipfft.h and descriptor.hpp)
-INCLUDE_PATH += -I/home/ac.nichols/H4I/INSTALLATION/H4I-HIPFFT/include
-INCLUDE_PATH += -I/home/ac.nichols/H4I/INSTALLATION/MKLSHIM_DEVELOP/include
+PATH_BASE = /home/nicholsds/FROM_CHIPSTAR/INSTALLATION
+INCLUDE_PATH += -I$(PATH_BASE)/H4I-HIPFFT/include
+INCLUDE_PATH += -I$(PATH_BASE)/MKLSHIM_DEVELOP/include
 
 ## I think libmkl_intel_lp64 allows 32 bit ints but libmkl_intel_ilp64 requires
 ## 64 bit ints ... key word here is "think" ... need to read the intel docs again
@@ -18,13 +16,15 @@ LDFLAGS += -L$(MKL_ROOT)/lib/intel64 -lmkl_sycl -lmkl_core -lmkl_intel_thread -l
 
 #LDFLAGS += -L$(HIP_PATH)/lib -lCHIP
 LDFLAGS += -L$(HIP_PATH)/lib64 -lCHIP
-LDFLAGS += -Wl,-rpath,/home/ac.nichols/H4I/INSTALLATION/MKLSHIM_DEVELOP/lib64
-LDFLAGS += -L/home/ac.nichols/H4I/INSTALLATION/MKLSHIM_DEVELOP/lib64 -lMKLShim
-LDFLAGS += -Wl,-rpath,/home/ac.nichols/H4I/INSTALLATION/H4I-HIPFFT/lib
-LDFLAGS += -L/home/ac.nichols/H4I/INSTALLATION/H4I-HIPFFT/lib -lhipfft
+LDFLAGS += -Wl,-rpath,$(PATH_BASE)/MKLSHIM_DEVELOP/lib64
+LDFLAGS += -L$(PATH_BASE)/MKLSHIM_DEVELOP/lib64 -lMKLShim
+LDFLAGS += -Wl,-rpath,$(PATH_BASE)/H4I-HIPFFT/lib64
+LDFLAGS += -L$(PATH_BASE)/H4I-HIPFFT/lib64 -lHipFFT
 
-LD=icpx
-CXX=icpx
+#LD=icpx
+#CXX=icpx
+LD=clang++
+CXX=clang++
 
 OBJS=hipfft_complex_1d.o
 EXE=hipfft_complex_1d.x
