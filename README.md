@@ -15,7 +15,7 @@ into the H4I-MKLSHIM/include/h4i/mklshim and H4I-MKLSHIM/src directories
 
 ## Build the H4I-HipFFT library:
 
-(1) Clone the cmake-build of this repo         
+(1) Clone the develop branch of this repo         
 (2) Source setUpModules.sh           
 (3) Edit the h4i-hipfft/build_hipfft.sh script for your environment             
 (4) Run the build_hipfft.sh (the INSTALL_DIR should be customized in the step above)
