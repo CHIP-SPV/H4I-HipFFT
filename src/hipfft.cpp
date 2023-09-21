@@ -166,7 +166,10 @@ hipfftResult hipfftMakePlan1d(hipfftHandle plan,
 void checkPlan(hipfftHandle plan)
 {
     H4I::MKLShim::checkFFTQueue(plan->ctxt);
-    H4I::MKLShim::checkFFTPlan(plan->ctxt, plan->descSR);
+    if (plan->descSR != nullptr) H4I::MKLShim::checkFFTPlan(plan->ctxt, plan->descSR);
+    if (plan->descSC != nullptr) H4I::MKLShim::checkFFTPlan(plan->ctxt, plan->descSC);
+    // if (plan->descDR != nullptr) H4I::MKLShim::checkFFTPlan(plan->ctxt, plan->descDR);
+    // if (plan->descDC != nullptr) H4I::MKLShim::checkFFTPlan(plan->ctxt, plan->descDC);
     return;
 }
 
@@ -403,6 +406,140 @@ hipfftResult hipfftMakePlanMany(hipfftHandle plan,
                                 size_t*      workSize)
 {
     hipfftResult result = HIPFFT_SUCCESS;
+
+    // full disclosure: I am not sure how to use inembed and onembed
+    // and currently ignore them ... will revisit this in the future
+
+    // also, I am letting the onemkl library handle the work buffers
+    // since I've had trouble with this so far ... initially passing 
+    // workSize into this function as a nullptr ... if it is NOT
+    // a nullptr, then I set it to zero and return to caller as zero 
+    // for now ... will revisit this in the future
+    if (workSize != nullptr) *workSize = (size_t)0;
+
+    // rank = number of fft dimensions being performed (ie. 1 = 1d, 2 = 2d, 3 = 3d)
+    // and "n" is an array with "rank" entries : (ie. n[rank])
+    std::vector<std::int64_t> dimensions;
+
+    // may be able to pass "n" directly to createFFTDescriptor** instead of 
+    // creating and filling "dimensions" but will use "dimensions" to control
+    // the data type
+    int i;
+    for (i = 0; i < rank; i++)
+    {
+        dimensions.push_back((int64_t)n[i]);
+    }
+
+    // for (i = 0; i < rank; i++)
+    // {
+    //     std::cout << "i = " << i << std::endl;
+    //     std::cout << "dimensions[" << i << "] = " << dimensions[i] << std::endl;
+    // }
+    // std::cout << "rank  " << rank << std::endl;
+    // std::cout << "dimensions.size() = " << dimensions.size() << std::endl << std::endl;
+
+    int64_t length = dimensions[0];
+    int64_t fwd_distance, bwd_distance;
+    int64_t input_stride, output_stride;
+    int64_t number_of_transforms;
+
+    // create the appropriate descriptor for the fft plan and then set plan values
+    switch (type)
+    {
+       case HIPFFT_R2C:
+       {
+          auto *desc = H4I::MKLShim::createFFTDescriptorSR(plan->ctxt,dimensions);
+
+          // set parameters for intel onemkl fft with real starting domain
+          fwd_distance = (int64_t)idist;
+          bwd_distance = (int64_t)odist;
+          input_stride = (int64_t)istride;
+          output_stride = (int64_t)ostride;
+          number_of_transforms = (int64_t)batch;
+
+          H4I::MKLShim::setFFTPlanValuesSR(plan->ctxt, desc,
+                                           input_stride, fwd_distance,
+                                           output_stride, bwd_distance,
+                                           number_of_transforms);
+
+          plan->descSR = desc;
+
+          break;
+       }
+       case HIPFFT_C2R:
+       {
+          auto *desc = H4I::MKLShim::createFFTDescriptorSR(plan->ctxt,dimensions);
+                                
+          // need to reverse the istride/ostride and idist/odist values to 
+          // account for the way Intel OneMKL FFT handles the forward and 
+          // backward transform parameters for an FFT with a real starting 
+          // domain
+
+          // set parameters
+          fwd_distance = (int64_t)odist;
+          bwd_distance = (int64_t)idist;
+          input_stride = (int64_t)ostride;
+          output_stride = (int64_t)istride;
+          number_of_transforms = (int64_t)batch;
+
+          H4I::MKLShim::setFFTPlanValuesSR(plan->ctxt, desc,
+                                           input_stride, fwd_distance,
+                                           output_stride, bwd_distance,
+                                           number_of_transforms);
+
+          plan->descSR = desc;
+    
+          break;
+       }
+       case HIPFFT_D2Z:
+       {
+          auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,dimensions);
+          plan->descDR = desc;
+          break;
+       }
+       case HIPFFT_Z2D:
+       {
+          auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,dimensions);
+          plan->descDR = desc;
+          break;
+       }
+       case HIPFFT_C2C:
+       {
+          auto *desc = H4I::MKLShim::createFFTDescriptorSC(plan->ctxt,dimensions);
+
+          H4I::MKLShim::setFFTPlanValuesSC(plan->ctxt, desc,
+                                           (int64_t)istride, (int64_t)idist,
+                                           (int64_t)ostride, (int64_t)odist,
+                                           (int64_t)batch);
+
+          // set parameters for intel onemkl fft
+          fwd_distance = (int64_t)idist;
+          bwd_distance = (int64_t)odist;
+          input_stride = (int64_t)istride;
+          output_stride = (int64_t)ostride;
+          number_of_transforms = (int64_t)batch;
+
+          H4I::MKLShim::setFFTPlanValuesSC(plan->ctxt, desc,
+                                           input_stride, fwd_distance,
+                                           output_stride, bwd_distance,
+                                           number_of_transforms);
+
+          plan->descSC = desc;
+          break;
+       }
+       case HIPFFT_Z2Z:
+       {
+          auto *desc = H4I::MKLShim::createFFTDescriptorDC(plan->ctxt,dimensions);
+          plan->descDC = desc;
+          break;
+       }
+       default:
+       {
+          result = HIPFFT_INVALID_PLAN;
+          break;
+       }
+    }
+
     return result;
 }
 

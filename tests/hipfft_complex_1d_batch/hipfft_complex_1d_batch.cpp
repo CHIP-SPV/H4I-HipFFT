@@ -22,35 +22,56 @@ int main(int argc, char **argv)
     int ny = 16;
     int N_alloc;
     int Nbytes;
+
+    int batch;
    
     hipfftType typ = HIPFFT_C2C;
     hipfftResult result;
     hipError_t hip_error;
 
-    // make the forward plan
-    result = hipfftPlan1d(&plan_c2c_fwd, nx, HIPFFT_C2C, 1);
+    batch = ny;
 
-    result = hipfftPlan1d(&plan_c2c_bwd, nx, HIPFFT_C2C, 1);
-    
+    // make the forward plan
+    result = hipfftPlanMany(&plan_c2c_fwd, 1, &nx,
+                            &nx,1,nx,
+                            &nx,1,nx,
+                            HIPFFT_C2C, batch);
+
+    result = hipfftPlanMany(&plan_c2c_bwd, 1, &nx,
+                            &nx,1,nx,
+                            &nx,1,nx,
+                            HIPFFT_C2C, batch);
+
     std::cout << std::scientific << std::setprecision(8);
+
+    std::cout << "check plan_c2c_fwd" << std::endl;
+    checkPlan(plan_c2c_fwd);
+    std::cout << "check plan_c2c_bwd" << std::endl;
+    checkPlan(plan_c2c_bwd);
 
     // local memory
     std::complex<float> *cx = NULL;
     std::complex<float> *cy = NULL;
 
-    N_alloc = nx;
+    N_alloc = nx*ny;
 
     Nbytes = N_alloc*sizeof(std::complex<float>);
     cx = (std::complex<float>*)malloc(Nbytes);
     cy = (std::complex<float>*)malloc(Nbytes);
 
     // initialize
+    int offset;
     float anx = float(nx);
     float dx = 2.0*M_PI/(anx);    
-    for (int i = 0; i < nx; i++)
+    for (int j = 0; j < ny; j++)
       {
-        cx[i] = std::complex<float>(sin(i*dx),0.0);
-        cy[i] = std::complex<float>(0.0,0.0);
+        for (int i = 0; i < nx; i++)
+          {
+            offset = j*nx + i;
+
+            cx[offset] = std::complex<float>(sin(i*dx),0.0);
+            cy[offset] = std::complex<float>(0.0,0.0);
+          }
       }
     
     // device memory
@@ -110,13 +131,21 @@ int main(int argc, char **argv)
     //  error check
     double local_error = 0.0;
     double max_error = 0.0;
-    for (int i = 0; i < nx; i++)
+    for (int j = 0; j < batch; j++)
       {
-        // rescale cy to account for the scaling applied during the fft transforms
-        cy[i] /= anx;
+        for (int i = 0; i < nx; i++)
+          {
+            offset = j*nx + i;
 
-        local_error = fabs(cx[i] - cy[i]);
-        if (local_error > max_error) max_error = local_error;
+            // rescale cy to account for the scaling applied during the fft transforms
+            cy[offset] /= anx;
+
+            local_error = fabs(cx[offset] - cy[offset]);
+            if (local_error > max_error) max_error = local_error;
+
+            // std::cout << cx[offset] << " " << cy[offset] << " " << (cx[offset] - cy[offset]) << std::endl;
+          }
+        // std::cout << std::endl;
       }
 
     std::cout << std::scientific << std::setprecision(15);
@@ -140,7 +169,6 @@ int main(int argc, char **argv)
     // make sure Q is finished
     hip_error = hipDeviceSynchronize();
 
-#if 0
     // we should be able to reuse the plan handle now
     result = hipfftCreate(&plan_c2c_fwd);
     result = hipfftCreate(&plan_c2c_bwd);
@@ -154,7 +182,6 @@ int main(int argc, char **argv)
 
     // make sure Q is finished
     hip_error = hipDeviceSynchronize();
-#endif
 
     std::cout << "FINISHED!" << std::endl;
 

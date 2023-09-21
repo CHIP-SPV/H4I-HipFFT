@@ -26,10 +26,28 @@ namespace H4I::MKLShim
       // descriptor for 1d transforms
       fftDescriptorSR(Context* ctxt, std::int64_t length) : fft_plan(length)
       {
+          // commit the plan
+          fft_plan.commit(ctxt->queue);
+          // wait for everything to complete before continuing
+          ctxt->queue.wait();
+
+          // use the soon-to-be default (can be removed in the future) for storing complex numbers
+          // fft_plan.set_value(oneapi::mkl::dft::config_param::CONJUGATE_EVEN_STORAGE, DFTI_COMPLEX_COMPLEX);
+          // commit the plan
+          // fft_plan.commit(ctxt->queue);
+          // wait for everything to complete before continuing
+          // ctxt->queue.wait();
+      }
+
+      fftDescriptorSR(Context* ctxt, std::int64_t length,
+                      std::int64_t istride, std::int64_t idist,
+                      std::int64_t ostride, std::int64_t odist,
+                      std::int64_t batch) : fft_plan(length)
+      {
 	  // commit the plan
-	  fft_plan.commit(ctxt->queue);
+	  // fft_plan.commit(ctxt->queue);
 	  // wait for everything to complete before continuing
-	  ctxt->queue.wait();
+	  // ctxt->queue.wait();
 
 	  // use the soon-to-be default (can be removed in the future) for storing complex numbers
 	  // fft_plan.set_value(oneapi::mkl::dft::config_param::CONJUGATE_EVEN_STORAGE, DFTI_COMPLEX_COMPLEX);
@@ -37,10 +55,68 @@ namespace H4I::MKLShim
           // fft_plan.commit(ctxt->queue);
           // wait for everything to complete before continuing
           // ctxt->queue.wait();
+
+          // set layouts
+          if (idist > 0)
+          {
+              fft_plan.set_value(oneapi::mkl::dft::config_param::FWD_DISTANCE, idist);
+          }
+          if (istride > 0)
+          {
+              int64_t in_strides[2] = {(int64_t)0, istride};
+              // fft_plan.set_value(oneapi::mkl::dft::config_param::INPUT_STRIDES, in_strides);
+          }
+           
+          if (odist > 0)
+          {
+              fft_plan.set_value(oneapi::mkl::dft::config_param::BWD_DISTANCE, odist);
+          }
+          if (ostride > 0)
+          {
+              int64_t out_strides[2] = {(int64_t)0, ostride};
+              // fft_plan.set_value(oneapi::mkl::dft::config_param::OUTPUT_STRIDES, out_strides)
+          }
+
+          // set the number of transforms to perform
+          if (batch > 1) 
+            {
+              // fft_plan.set_value(oneapi::mkl::dft::config_param::NUMBER_OF_TRANSFORMS, (int64_t)batch);
+            }
+
+          // fft_plan.set_value(oneapi::mkl::dft::config_param::NUMBER_OF_TRANSFORMS, 2);
+          // fft_plan.set_value(oneapi::mkl::dft::config_param::FWD_DISTANCE, 1);
+          // fft_plan.set_value(oneapi::mkl::dft::config_param::BWD_DISTANCE, 1);
+          
+
+          // commit the changes
+          fft_plan.commit(ctxt->queue);
+
+          // wait for everything to complete before continuing
+          ctxt->queue.wait();
       }
 
       // descriptor for multi-dimensional transforms
       fftDescriptorSR(Context* ctxt, std::vector<std::int64_t> dimensions) : fft_plan(dimensions)
+      {
+          // commit the plan
+          fft_plan.commit(ctxt->queue);
+          // wait for everything to complete before continuing
+          ctxt->queue.wait();
+
+          // use the soon-to-be default (can be removed in the future) for storing complex numbers
+          // fft_plan.set_value(oneapi::mkl::dft::config_param::CONJUGATE_EVEN_STORAGE, DFTI_COMPLEX_COMPLEX);
+          // commit the plan
+          // fft_plan.commit(ctxt->queue);
+          // wait for everything to complete before continuing
+          // ctxt->queue.wait();
+
+      }
+
+      // descriptor for multi-dimensional transforms
+      fftDescriptorSR(Context* ctxt, std::vector<std::int64_t> dimensions,
+                      std::int64_t istride, std::int64_t idist,
+                      std::int64_t ostride, std::int64_t odist,
+                      std::int64_t batch) : fft_plan(dimensions)
       {
           // commit the plan
           fft_plan.commit(ctxt->queue);
@@ -53,6 +129,39 @@ namespace H4I::MKLShim
           // fft_plan.commit(ctxt->queue);
           // wait for everything to complete before continuing
           // ctxt->queue.wait();
+
+          // set layouts
+          if (idist > 0)
+          {
+              // fft_plan.set_value(oneapi::mkl::dft::config_param::FWD_DISTANCE, idist);
+          }
+          if (istride > 0)
+          {
+              int64_t in_strides[2] = {(int64_t)0, istride};
+              // fft_plan.set_value(oneapi::mkl::dft::config_param::INPUT_STRIDES, in_strides);
+          }
+
+          if (odist > 0)
+          {
+              // fft_plan.set_value(oneapi::mkl::dft::config_param::BWD_DISTANCE, odist);
+          }
+          if (ostride > 0)
+          {
+              int64_t out_strides[2] = {(int64_t)0, ostride};
+              // fft_plan.set_value(oneapi::mkl::dft::config_param::OUTPUT_STRIDES, out_strides)
+          }
+
+          // set the number of transforms to perform
+          if (batch > 1)
+            {
+              // fft_plan.set_value(oneapi::mkl::dft::config_param::NUMBER_OF_TRANSFORMS, batch);
+            }
+
+          // commit the changes
+          fft_plan.commit(ctxt->queue);
+
+          // wait for everything to complete before continuing
+          ctxt->queue.wait();
       }
 
       // execute R2C ... is it better to do this in the struct?
@@ -205,6 +314,7 @@ namespace H4I::MKLShim
      // ctxt->queue.wait();
 
      int64_t value = 0;
+     float rvalue = 0.0;
      desc->fft_plan.get_value(oneapi::mkl::dft::config_param::FORWARD_DOMAIN, &value);
      std::cout << "in checkFFTPlan : FORWARD_DOMAIN = " << value << std::endl;
      desc->fft_plan.get_value(oneapi::mkl::dft::config_param::PRECISION, &value);
@@ -215,7 +325,74 @@ namespace H4I::MKLShim
      std::cout << "in checkFFTPlan : LENGTHS = " << value << std::endl;
      desc->fft_plan.get_value(oneapi::mkl::dft::config_param::CONJUGATE_EVEN_STORAGE, &value);
      std::cout << "in checkFFTPlan : CONJUGATE_EVEN_STORAGE = " << value << std::endl;
+#if 1
+     desc->fft_plan.get_value(oneapi::mkl::dft::config_param::FWD_DISTANCE, &value);
+     std::cout << "in checkFFTPlan : FWD_DISTANCE = " << value << std::endl;
+     desc->fft_plan.get_value(oneapi::mkl::dft::config_param::BWD_DISTANCE, &value);
+     std::cout << "in checkFFTPlan : BWD_DISTANCE = " << value << std::endl;
 
+     desc->fft_plan.get_value(oneapi::mkl::dft::config_param::NUMBER_OF_TRANSFORMS, &value);
+     std::cout << "in checkFFTPlan : NUMBER_OF_TRANSFORMS = " << value << std::endl;
+
+     desc->fft_plan.get_value(oneapi::mkl::dft::config_param::FORWARD_SCALE, &rvalue);
+     std::cout << "in checkFFTPlan : FORWARD_SCALE = " << rvalue << std::endl;
+
+     desc->fft_plan.get_value(oneapi::mkl::dft::config_param::BACKWARD_SCALE, &rvalue);
+     std::cout << "in checkFFTPlan : BACKWARD_SCALE = " << rvalue << std::endl;
+
+     // ctxt->queue.wait();
+     // desc->fft_plan.set_value(oneapi::mkl::dft::config_param::NUMBER_OF_TRANSFORMS, 2);
+     // ctxt->queue.wait();
+     // desc->fft_plan.commit(ctxt->queue);
+
+     // desc->fft_plan.get_value(oneapi::mkl::dft::config_param::NUMBER_OF_TRANSFORMS, &value);
+     // std::cout << "in checkFFTPlan : NUMBER_OF_TRANSFORMS = " << value << std::endl;
+#endif
+     ctxt->queue.wait();
+
+     return;
+  }
+
+  // simple plan check for the SR plan ... will be removed
+  void checkFFTPlan(Context *ctxt, fftDescriptorSC *desc)
+  {
+     // ctxt->queue.wait();
+          
+     int64_t value = 0;
+     float rvalue = 0.0;
+     desc->fft_plan.get_value(oneapi::mkl::dft::config_param::FORWARD_DOMAIN, &value);
+     std::cout << "in checkFFTPlan : FORWARD_DOMAIN = " << value << std::endl;
+     desc->fft_plan.get_value(oneapi::mkl::dft::config_param::PRECISION, &value);
+     std::cout << "in checkFFTPlan : PRECISION = " << value << std::endl;
+     desc->fft_plan.get_value(oneapi::mkl::dft::config_param::DIMENSION, &value);
+     std::cout << "in checkFFTPlan : DIMENSION = " << value << std::endl;
+     desc->fft_plan.get_value(oneapi::mkl::dft::config_param::LENGTHS, &value);
+     std::cout << "in checkFFTPlan : LENGTHS = " << value << std::endl;
+     desc->fft_plan.get_value(oneapi::mkl::dft::config_param::CONJUGATE_EVEN_STORAGE, &value);
+     std::cout << "in checkFFTPlan : CONJUGATE_EVEN_STORAGE = " << value << std::endl;
+#if 1
+     desc->fft_plan.get_value(oneapi::mkl::dft::config_param::FWD_DISTANCE, &value);
+     std::cout << "in checkFFTPlan : FWD_DISTANCE = " << value << std::endl;
+     desc->fft_plan.get_value(oneapi::mkl::dft::config_param::BWD_DISTANCE, &value);
+     std::cout << "in checkFFTPlan : BWD_DISTANCE = " << value << std::endl;
+
+     desc->fft_plan.get_value(oneapi::mkl::dft::config_param::NUMBER_OF_TRANSFORMS, &value);
+     std::cout << "in checkFFTPlan : NUMBER_OF_TRANSFORMS = " << value << std::endl;
+
+     desc->fft_plan.get_value(oneapi::mkl::dft::config_param::FORWARD_SCALE, &rvalue);
+     std::cout << "in checkFFTPlan : FORWARD_SCALE = " << rvalue << std::endl;
+
+     desc->fft_plan.get_value(oneapi::mkl::dft::config_param::BACKWARD_SCALE, &rvalue);
+     std::cout << "in checkFFTPlan : BACKWARD_SCALE = " << rvalue << std::endl;
+
+     // ctxt->queue.wait();
+     // desc->fft_plan.set_value(oneapi::mkl::dft::config_param::NUMBER_OF_TRANSFORMS, 2);
+     // ctxt->queue.wait();
+     // desc->fft_plan.commit(ctxt->queue);
+
+     // desc->fft_plan.get_value(oneapi::mkl::dft::config_param::NUMBER_OF_TRANSFORMS, &value);
+     // std::cout << "in checkFFTPlan : NUMBER_OF_TRANSFORMS = " << value << std::endl;
+#endif
      ctxt->queue.wait();
 
      return;
@@ -224,7 +401,7 @@ namespace H4I::MKLShim
   // void testFFTPlan(Context *ctxt, fftDescriptorSR *descSR, int Nbytes, float *idata, float _Complex *odata)
   void testFFTPlan(Context *ctxt, fftDescriptorSR *descSR, int Nbytes, float *idata)
   {
-      std::cout << "in checkFFTPlan : Nbytes = " << Nbytes << "   device info =  " <<
+      std::cout << "in testFFTPlan : Nbytes = " << Nbytes << "   device info =  " <<
              ctxt->queue.get_device().get_info<sycl::info::device::name>() << std::endl;
       // ctxt->queue.memcpy(odata, idata, Nbytes);
       ctxt->queue.wait();
@@ -238,9 +415,21 @@ namespace H4I::MKLShim
       return;
   }
 
+
   // create the 1d fft descriptors
   fftDescriptorSR* createFFTDescriptorSR(Context* ctxt, int64_t length) {
      auto d = new fftDescriptorSR(ctxt, length);
+     return d;
+  }
+
+  fftDescriptorSR* createFFTDescriptorSR(Context* ctxt, int64_t length,
+                                         int64_t istride, int64_t idist,
+                                         int64_t ostride, int64_t odist,
+                                         int64_t batch) {
+     auto d = new fftDescriptorSR(ctxt, length,
+                                  istride, idist,
+                                  ostride, odist,
+                                  batch);
      return d;
   }
 
@@ -262,6 +451,17 @@ namespace H4I::MKLShim
   // create the multi-dimensional fft descriptors
   fftDescriptorSR* createFFTDescriptorSR(Context* ctxt, std::vector<std::int64_t> dimensions) {
      auto d = new fftDescriptorSR(ctxt, dimensions);
+     return d;
+  }
+
+  fftDescriptorSR* createFFTDescriptorSR(Context* ctxt, std::vector<std::int64_t> dimensions,
+                                         int64_t istride, int64_t idist,
+                                         int64_t ostride, int64_t odist,
+                                         int64_t batch) {
+     auto d = new fftDescriptorSR(ctxt, dimensions,
+                                  istride, idist,
+                                  ostride, odist,
+                                  batch);
      return d;
   }
 
@@ -303,6 +503,131 @@ namespace H4I::MKLShim
      delete descDC;
      descDC = nullptr;
      return;
+  }
+
+  // set values for fft plans
+  void setFFTPlanValuesSR(Context *ctxt, fftDescriptorSR *descSR,
+                          int64_t input_stride, int64_t fwd_distance,
+                          int64_t output_stride, int64_t bwd_distance,
+                          int64_t number_of_transforms)
+  {
+      // this is set for 1D batched transforms INITIALLY until I understand 
+      // how to use the inembed and onembed arrays from hipfft
+
+      ctxt->queue.wait();
+
+      // set layout
+      int64_t in_strides[2] = {(int64_t)0, input_stride};
+      int64_t out_strides[2] = {(int64_t)0, output_stride};
+
+      descSR->fft_plan.set_value(oneapi::mkl::dft::config_param::FWD_DISTANCE, fwd_distance);
+      descSR->fft_plan.set_value(oneapi::mkl::dft::config_param::BWD_DISTANCE, bwd_distance);
+
+      descSR->fft_plan.set_value(oneapi::mkl::dft::config_param::INPUT_STRIDES, in_strides);
+      descSR->fft_plan.set_value(oneapi::mkl::dft::config_param::OUTPUT_STRIDES, out_strides);
+
+      descSR->fft_plan.set_value(oneapi::mkl::dft::config_param::NUMBER_OF_TRANSFORMS, number_of_transforms);
+
+      // commit the changes
+      descSR->fft_plan.commit(ctxt->queue);
+
+      // wait for completion
+      ctxt->queue.wait();
+
+      return;
+  }
+
+  void setFFTPlanValuesSC(Context *ctxt, fftDescriptorSC *descSC,
+                          int64_t input_stride, int64_t fwd_distance,
+                          int64_t output_stride, int64_t bwd_distance,
+                          int64_t number_of_transforms)
+  {
+      // this is set for 1D batched transforms INITIALLY until I understand 
+      // how to use the inembed and onembed arrays from hipfft
+     
+      ctxt->queue.wait();
+
+      // set layout
+      int64_t in_strides[2] = {(int64_t)0, input_stride};
+      int64_t out_strides[2] = {(int64_t)0, output_stride}; 
+     
+      descSC->fft_plan.set_value(oneapi::mkl::dft::config_param::FWD_DISTANCE, fwd_distance);
+      descSC->fft_plan.set_value(oneapi::mkl::dft::config_param::BWD_DISTANCE, bwd_distance);
+     
+      descSC->fft_plan.set_value(oneapi::mkl::dft::config_param::INPUT_STRIDES, in_strides);
+      descSC->fft_plan.set_value(oneapi::mkl::dft::config_param::OUTPUT_STRIDES, out_strides);
+     
+      descSC->fft_plan.set_value(oneapi::mkl::dft::config_param::NUMBER_OF_TRANSFORMS, number_of_transforms);
+
+      // commit the changes
+      descSC->fft_plan.commit(ctxt->queue);
+
+      // wait for completion
+      ctxt->queue.wait();
+
+      return;
+  }
+
+  void setFFTPlanValuesDR(Context *ctxt, fftDescriptorDR *descDR,
+                          int64_t input_stride, int64_t fwd_distance,
+                          int64_t output_stride, int64_t bwd_distance,
+                          int64_t number_of_transforms)
+  {
+      // this is set for 1D batched transforms INITIALLY until I understand 
+      // how to use the inembed and onembed arrays from hipfft
+
+      ctxt->queue.wait();
+
+      // set layout
+      int64_t in_strides[2] = {(int64_t)0, input_stride};
+      int64_t out_strides[2] = {(int64_t)0, output_stride};
+
+      descDR->fft_plan.set_value(oneapi::mkl::dft::config_param::FWD_DISTANCE, fwd_distance);
+      descDR->fft_plan.set_value(oneapi::mkl::dft::config_param::BWD_DISTANCE, bwd_distance);
+
+      descDR->fft_plan.set_value(oneapi::mkl::dft::config_param::INPUT_STRIDES, in_strides);
+      descDR->fft_plan.set_value(oneapi::mkl::dft::config_param::OUTPUT_STRIDES, out_strides);
+
+      descDR->fft_plan.set_value(oneapi::mkl::dft::config_param::NUMBER_OF_TRANSFORMS, number_of_transforms);
+
+      // commit the changes
+      descDR->fft_plan.commit(ctxt->queue);
+
+      // wait for completion
+      ctxt->queue.wait();
+
+      return;
+  }
+
+  void setFFTPlanValuesDC(Context *ctxt, fftDescriptorDC *descDC,
+                          int64_t input_stride, int64_t fwd_distance,
+                          int64_t output_stride, int64_t bwd_distance,
+                          int64_t number_of_transforms)
+  {
+      // this is set for 1D batched transforms INITIALLY until I understand 
+      // how to use the inembed and onembed arrays from hipfft
+
+      ctxt->queue.wait();
+
+      // set layout
+      int64_t in_strides[2] = {(int64_t)0, input_stride};
+      int64_t out_strides[2] = {(int64_t)0, output_stride};
+
+      descDC->fft_plan.set_value(oneapi::mkl::dft::config_param::FWD_DISTANCE, fwd_distance);
+      descDC->fft_plan.set_value(oneapi::mkl::dft::config_param::BWD_DISTANCE, bwd_distance);
+
+      descDC->fft_plan.set_value(oneapi::mkl::dft::config_param::INPUT_STRIDES, in_strides);
+      descDC->fft_plan.set_value(oneapi::mkl::dft::config_param::OUTPUT_STRIDES, out_strides);
+
+      descDC->fft_plan.set_value(oneapi::mkl::dft::config_param::NUMBER_OF_TRANSFORMS, number_of_transforms);
+
+      // commit the changes
+      descDC->fft_plan.commit(ctxt->queue);
+
+      // wait for completion
+      ctxt->queue.wait();
+
+      return;
   }
 
   // execute the plans

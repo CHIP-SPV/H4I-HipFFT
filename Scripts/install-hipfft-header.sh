@@ -13,7 +13,7 @@ bindir=$2
 instdir=$3
 
 mkdir -p $bindir/include
-cp $srcdir/library/include/hipfft.h $bindir/include/
+cp $srcdir/library/include/hipfft/hipfft.h $bindir/include/
 mkdir -p $instdir/share/licenses
 cp $srcdir/LICENSE.md $instdir/share/licenses/hipfft.h.LICENSE.md
 
