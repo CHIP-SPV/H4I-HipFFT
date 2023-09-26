@@ -475,7 +475,7 @@ hipfftResult hipfftMakePlanMany(hipfftHandle plan,
           // backward transform parameters for an FFT with a real starting 
           // domain
 
-          // set parameters
+          // set parameters for intel onemkl fft with real starting domain
           fwd_distance = (int64_t)odist;
           bwd_distance = (int64_t)idist;
           input_stride = (int64_t)ostride;
@@ -494,12 +494,42 @@ hipfftResult hipfftMakePlanMany(hipfftHandle plan,
        case HIPFFT_D2Z:
        {
           auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,dimensions);
+
+          // set parameters for intel onemkl fft with real starting domain
+          fwd_distance = (int64_t)idist;
+          bwd_distance = (int64_t)odist;
+          input_stride = (int64_t)istride;
+          output_stride = (int64_t)ostride;
+          number_of_transforms = (int64_t)batch;
+
+          H4I::MKLShim::setFFTPlanValuesDR(plan->ctxt, desc,
+                                           input_stride, fwd_distance,
+                                           output_stride, bwd_distance,
+                                           number_of_transforms);
           plan->descDR = desc;
           break;
        }
        case HIPFFT_Z2D:
        {
           auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,dimensions);
+
+          // need to reverse the istride/ostride and idist/odist values to 
+          // account for the way Intel OneMKL FFT handles the forward and 
+          // backward transform parameters for an FFT with a real starting 
+          // domain
+
+          // set parameters for intel onemkl fft with real starting domain
+          fwd_distance = (int64_t)odist;
+          bwd_distance = (int64_t)idist;
+          input_stride = (int64_t)ostride;
+          output_stride = (int64_t)istride;
+          number_of_transforms = (int64_t)batch;
+
+          H4I::MKLShim::setFFTPlanValuesDR(plan->ctxt, desc,
+                                           input_stride, fwd_distance,
+                                           output_stride, bwd_distance,
+                                           number_of_transforms);
+
           plan->descDR = desc;
           break;
        }
@@ -507,12 +537,7 @@ hipfftResult hipfftMakePlanMany(hipfftHandle plan,
        {
           auto *desc = H4I::MKLShim::createFFTDescriptorSC(plan->ctxt,dimensions);
 
-          H4I::MKLShim::setFFTPlanValuesSC(plan->ctxt, desc,
-                                           (int64_t)istride, (int64_t)idist,
-                                           (int64_t)ostride, (int64_t)odist,
-                                           (int64_t)batch);
-
-          // set parameters for intel onemkl fft
+          // set parameters for intel onemkl fft with a complex starting domain
           fwd_distance = (int64_t)idist;
           bwd_distance = (int64_t)odist;
           input_stride = (int64_t)istride;
@@ -530,6 +555,19 @@ hipfftResult hipfftMakePlanMany(hipfftHandle plan,
        case HIPFFT_Z2Z:
        {
           auto *desc = H4I::MKLShim::createFFTDescriptorDC(plan->ctxt,dimensions);
+
+          // set parameters for intel onemkl fft with a complex starting domain
+          fwd_distance = (int64_t)idist;
+          bwd_distance = (int64_t)odist;
+          input_stride = (int64_t)istride;
+          output_stride = (int64_t)ostride;
+          number_of_transforms = (int64_t)batch;
+
+          H4I::MKLShim::setFFTPlanValuesDC(plan->ctxt, desc,
+                                           input_stride, fwd_distance,
+                                           output_stride, bwd_distance,
+                                           number_of_transforms);
+
           plan->descDC = desc;
           break;
        }

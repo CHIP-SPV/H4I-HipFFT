@@ -1,0 +1,8 @@
+hipfft_real_1d
+hipfft_double_complex_1d
+hipfft_double_complex_1d_batch
+hipfft_double_real_1d
+hipfft_real_1d_batch
+hipfft_complex_1d
+hipfft_complex_1d_batch
+hipfft_double_real_1d_batch
