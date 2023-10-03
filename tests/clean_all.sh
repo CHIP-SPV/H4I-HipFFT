@@ -10,6 +10,6 @@ do
     echo "cleaning $test ..."
     cd $test
     make -f Makefile realclean > my_clean_output
-    rm -f *.e* *.o* my_*_output
+    rm -f *.e* *.o* my_*_output *_spectrum
     cd ../
 done

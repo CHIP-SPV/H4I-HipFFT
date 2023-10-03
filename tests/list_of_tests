@@ -6,3 +6,4 @@ hipfft_real_1d_batch
 hipfft_complex_1d
 hipfft_complex_1d_batch
 hipfft_double_real_1d_batch
+hipfft_real_3d

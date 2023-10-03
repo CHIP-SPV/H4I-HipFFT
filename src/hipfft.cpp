@@ -227,10 +227,17 @@ hipfftResult hipfftMakePlan2d(hipfftHandle plan,
     //       but I think intel follows the same convention as hipfft
     std::vector<std::int64_t> dimensions {(int64_t)nx, (int64_t)ny};
 
+    plan->Is2D = 1;
+
     // create the appropriate descriptor for the fft plan
     switch (type)
     {
        case HIPFFT_R2C:
+       {
+          auto *desc = H4I::MKLShim::createFFTDescriptorSR(plan->ctxt,dimensions);
+          plan->descSR = desc;
+          break;
+       }
        case HIPFFT_C2R:
        {
           auto *desc = H4I::MKLShim::createFFTDescriptorSR(plan->ctxt,dimensions);
@@ -238,6 +245,11 @@ hipfftResult hipfftMakePlan2d(hipfftHandle plan,
           break;
        }
        case HIPFFT_D2Z:
+       {
+          auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,dimensions);
+          plan->descDR = desc;
+          break;
+       }
        case HIPFFT_Z2D:
        {
           auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,dimensions);
@@ -306,22 +318,91 @@ hipfftResult hipfftMakePlan3d(hipfftHandle plan,
 {
     hipfftResult result = HIPFFT_SUCCESS;
 
+    int i;
+
     // define the dimensions vector
     // NOTE: may need to swap these ... need to look at the intel docs, 
     //       but I think intel follows the same convention as hipfft
     std::vector<std::int64_t> dimensions {(int64_t)nx, (int64_t)ny, (int64_t)nz};
 
+    plan->Is3D = 1;
+
     // create the appropriate descriptor for the fft plan
     switch (type)
     {
        case HIPFFT_R2C:
+       {
+          plan->starting_domain = 1;
+          plan->fft_direction = 1;
+          
+          // set the fft dimensions ...
+          // slowest changing index to fastest changing index
+          for (i = 0; i < 3; i ++)
+          {
+            plan->fft_dimensions[i] = dimensions[i];
+          }
+
+          // assume in-place transforms and deal with the contraction in the 
+          // leading (the fastest index) dimension
+          int64_t c_length = (dimensions[2])/2 + 1;
+          int64_t r_length = 2*c_length; // may need to be reset 
+
+          // set the layout for physical (real) and wavenumber (complex) spaces
+          int64_t in_strides[4] = {0, dimensions[1]*r_length, r_length, 1};
+          int64_t out_strides[4] = {0, dimensions[1]*c_length, c_length, 1};
+
+          // set the fft strides
+          for (i = 0; i < 4; i ++) 
+          {
+            plan->r_strides[i] = in_strides[i];
+            plan->c_strides[i] = out_strides[i];
+          }
+
+          auto *desc = H4I::MKLShim::createFFTDescriptorSR(plan->ctxt,dimensions,
+                                                           in_strides,out_strides);
+          plan->descSR = desc;
+
+          break;
+       }
        case HIPFFT_C2R:
        {
-          auto *desc = H4I::MKLShim::createFFTDescriptorSR(plan->ctxt,dimensions);
+          plan->starting_domain = 1;
+          plan->fft_direction = 0;
+
+          // set the fft dimensions ...
+          // slowest changing index to fastest changing index
+          for (i = 0; i < 3; i ++)
+          {
+            plan->fft_dimensions[i] = dimensions[i];
+          }
+
+          // assume in-place transforms and deal with the contraction in the 
+          // leading (the fastest index) dimension
+          int64_t c_length = (dimensions[2])/2 + 1;
+          int64_t r_length = 2*c_length; // may need to be reset 
+
+          // set the layout for physical (real) and wavenumber (complex) spaces
+          int64_t out_strides[4] = {0, dimensions[1]*r_length, r_length, 1};
+          int64_t in_strides[4] = {0, dimensions[1]*c_length, c_length, 1};
+
+          // set the fft strides
+          for (i = 0; i < 4; i ++) 
+          {
+            plan->r_strides[i] = out_strides[i];
+            plan->c_strides[i] = in_strides[i];
+          }
+
+          auto *desc = H4I::MKLShim::createFFTDescriptorSR(plan->ctxt,dimensions,
+                                                           in_strides,out_strides);
           plan->descSR = desc;
           break;
        }
        case HIPFFT_D2Z:
+       {
+          auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,dimensions);
+          plan->descDR = desc;
+          break;
+       }
        case HIPFFT_Z2D:
        {
           auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,dimensions);
@@ -583,12 +664,134 @@ hipfftResult hipfftMakePlanMany(hipfftHandle plan,
 
 hipfftResult hipfftExecR2C(hipfftHandle plan, hipfftReal* idata, hipfftComplex* odata)
 {
+    int reset_r_stride = 0;
+
+    // need to make some checks for the 2d and 3d plans
+    if ((plan->Is2D == 1) || (plan->Is3D == 1))
+      {
+        if (idata == (hipfftReal*)odata) // in-place transform
+          {
+            // need to check the plan values to see if they match
+            if (plan->placement == 1)  // set for in-place transform
+              {
+                // nothing to do
+              }
+            else // set for not-in-place transform and need to change for in-place
+              {
+                // need to modify r_strides ... need to find a clean way to do this
+                int64_t r_length;
+                if (plan->Is2D == 1)
+                  {
+                    r_length = 2*(plan->fft_dimensions[1]/2 + 1);
+                    plan->r_strides[1] = r_length;
+                  }
+                if (plan->Is3D == 1)
+                  {
+                    r_length = 2*(plan->fft_dimensions[2]/2 + 1);
+                    plan->r_strides[2] = r_length;
+                    plan->r_strides[1] = plan->fft_dimensions[1]*r_length;
+                  }
+
+                reset_r_stride = 1;
+                plan->placement = 1;
+              }
+          }
+        else  // not-in-place transform
+          {
+            // need to check the plan values to see if they match
+            if (plan->placement == 0)  // set for not-in-place transform
+              {
+                // nothing to do
+              }
+            else // set in-place transform and needs to be changed for not-in-place
+              { 
+                // need to modify r_strides ... need to find a clean way to do this
+                if (plan->Is2D == 1)
+                  {
+                    plan->r_strides[1] = plan->fft_dimensions[1];
+                  }
+                if (plan->Is3D == 1)
+                  {
+                    plan->r_strides[2] = plan->fft_dimensions[2];
+                    plan->r_strides[1] = plan->fft_dimensions[1]*plan->fft_dimensions[2];
+                  }
+
+                reset_r_stride = 1;
+                plan->placement = 0;
+              }
+          }
+      }
+
+    int64_t new_strides[4];
+    for (int i = 0; i < 4; i++) new_strides[i] = plan->r_strides[i];
+
     H4I::MKLShim::fftExecR2C(plan->ctxt, plan->descSR, idata, (float _Complex *)odata);
     return HIPFFT_SUCCESS;
 }
 
 hipfftResult hipfftExecC2R(hipfftHandle plan, hipfftComplex* idata, hipfftReal* odata)
 {
+    int reset_r_stride = 0;
+
+    // need to make some checks for the 2d and 3d plans
+    if ((plan->Is2D == 1) || (plan->Is3D == 1))
+      {
+        if ((hipfftReal*)idata == odata) // in-place transform
+          {
+            // need to check the plan values to see if they match
+            if (plan->placement == 1)  // set for in-place transform
+              {
+                // nothing to do
+              }
+            else // set for not-in-place transform and need to change for in-place
+              {
+                // need to modify r_strides ... need to find a clean way to do this
+                int64_t r_length;
+                if (plan->Is2D == 1)
+                  {
+                    r_length = 2*(plan->fft_dimensions[1]/2 + 1);
+                    plan->r_strides[1] = r_length;
+                  }
+                if (plan->Is3D == 1)
+                  {
+                    r_length = 2*(plan->fft_dimensions[2]/2 + 1);
+                    plan->r_strides[2] = r_length;
+                    plan->r_strides[1] = plan->fft_dimensions[1]*r_length;
+                  }
+
+                reset_r_stride = 1;
+                plan->placement = 1;
+              }
+          }
+        else  // not-in-place transform
+          {
+            // need to check the plan values to see if they match
+            if (plan->placement == 0)  // set for not-in-place transform
+              {
+                // nothing to do
+              }
+            else // set in-place transform and needs to be changed for not-in-place
+              {
+                // need to modify r_strides ... need to find a clean way to do this
+                if (plan->Is2D == 1)
+                  {
+                    plan->r_strides[1] = plan->fft_dimensions[1];
+                  }
+                if (plan->Is3D == 1)
+                  {
+                    plan->r_strides[2] = plan->fft_dimensions[2];
+                    plan->r_strides[1] = plan->fft_dimensions[1]*plan->fft_dimensions[2];
+                  }
+
+                reset_r_stride = 1;
+                plan->placement = 0;
+              }
+          }
+      }
+
+    int64_t new_strides[4];
+    for (int i = 0; i < 4; i++) new_strides[i] = plan->r_strides[i];
+
     H4I::MKLShim::fftExecC2R(plan->ctxt, plan->descSR, (float _Complex *)idata, odata);
     return HIPFFT_SUCCESS;
 }
