@@ -11,8 +11,8 @@ INCLUDE_PATH += -I$(PATH_BASE)/MKLSHIM_DEVELOP/include
 ## I think libmkl_intel_lp64 allows 32 bit ints but libmkl_intel_ilp64 requires
 ## 64 bit ints ... key word here is "think" ... need to read the intel docs again
 LDFLAGS =
-LDFLAGS += -L$(MKL_ROOT)/lib/intel64 -lmkl_sycl -lmkl_core -lmkl_intel_thread -lmkl_intel_lp64
-#LDFLAGS += -L$(MKL_ROOT)/lib/intel64 -lmkl_sycl -lmkl_core -lmkl_intel_thread -lmkl_intel_ilp64
+#LDFLAGS += -L$(MKL_ROOT)/lib/intel64 -lmkl_sycl -lmkl_core -lmkl_intel_thread -lmkl_intel_lp64
+LDFLAGS += -L$(MKL_ROOT)/lib/intel64 -lmkl_sycl -lmkl_core -lmkl_intel_thread -lmkl_intel_ilp64
 
 #LDFLAGS += -L$(HIP_PATH)/lib -lCHIP
 LDFLAGS += -L$(HIP_PATH)/lib64 -lCHIP
@@ -26,8 +26,8 @@ LDFLAGS += -L$(PATH_BASE)/H4I-HIPFFT/lib64 -lHipFFT
 LD=clang++
 CXX=clang++
 
-OBJS=spectrum_analyzer.o hipfft_real_3d.o
-EXE=hipfft_real_3d.x
+OBJS=spectrum_analyzer.o hipfft_double_real_3d.o
+EXE=hipfft_double_real_3d.x
 
 ## needed since I'm doing this on my office ubuntu machine without any form of hip installed
 DEFINES=-D__HIP_PLATFORM_SPIRV__

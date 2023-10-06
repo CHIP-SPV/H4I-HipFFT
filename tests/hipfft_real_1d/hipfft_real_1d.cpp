@@ -28,10 +28,8 @@ int main(int argc, char **argv)
 
     // make the forward plan
     result = hipfftPlan1d(&plan_r2c, nx, HIPFFT_R2C, 1);
-    // result = hipfftPlan2d(&plan_r2c, nx, ny, HIPFFT_R2C);
 
     result = hipfftPlan1d(&plan_c2r, nx, HIPFFT_C2R, 1);
-    // result = hipfftPlan2d(&plan_c2r, nx, ny, HIPFFT_C2R);
     
     std::cout << std::scientific << std::setprecision(8);
     // std::cout << " plan_r2c scale factor = " << plan_r2c->scale_factor << std::endl;

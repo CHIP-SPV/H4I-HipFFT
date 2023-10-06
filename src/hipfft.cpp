@@ -399,13 +399,67 @@ hipfftResult hipfftMakePlan3d(hipfftHandle plan,
        }
        case HIPFFT_D2Z:
        {
-          auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,dimensions);
+          plan->starting_domain = 1;
+          plan->fft_direction = 1;
+
+          // set the fft dimensions ...
+          // slowest changing index to fastest changing index
+          for (i = 0; i < 3; i ++)
+          {
+            plan->fft_dimensions[i] = dimensions[i];
+          }
+
+          // assume in-place transforms and deal with the contraction in the 
+          // leading (the fastest index) dimension
+          int64_t c_length = (dimensions[2])/2 + 1;
+          int64_t r_length = 2*c_length; // may need to be reset 
+
+          // set the layout for physical (real) and wavenumber (complex) spaces
+          int64_t in_strides[4] = {0, dimensions[1]*r_length, r_length, 1};
+          int64_t out_strides[4] = {0, dimensions[1]*c_length, c_length, 1};
+
+          // set the fft strides
+          for (i = 0; i < 4; i ++)
+          {
+            plan->r_strides[i] = in_strides[i];
+            plan->c_strides[i] = out_strides[i];
+          }
+
+          auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,dimensions,
+                                                           in_strides,out_strides);
           plan->descDR = desc;
           break;
        }
        case HIPFFT_Z2D:
        {
-          auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,dimensions);
+          plan->starting_domain = 1;
+          plan->fft_direction = 0;
+
+          // set the fft dimensions ...
+          // slowest changing index to fastest changing index
+          for (i = 0; i < 3; i ++)
+          {
+            plan->fft_dimensions[i] = dimensions[i];
+          }
+
+          // assume in-place transforms and deal with the contraction in the 
+          // leading (the fastest index) dimension
+          int64_t c_length = (dimensions[2])/2 + 1;
+          int64_t r_length = 2*c_length; // may need to be reset 
+
+          // set the layout for physical (real) and wavenumber (complex) spaces
+          int64_t out_strides[4] = {0, dimensions[1]*r_length, r_length, 1};
+          int64_t in_strides[4] = {0, dimensions[1]*c_length, c_length, 1};
+
+          // set the fft strides
+          for (i = 0; i < 4; i ++)
+          {
+            plan->r_strides[i] = out_strides[i];
+            plan->c_strides[i] = in_strides[i];
+          }
+
+          auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,dimensions,
+                                                           in_strides,out_strides);
           plan->descDR = desc;
           break;
        }
@@ -662,23 +716,28 @@ hipfftResult hipfftMakePlanMany(hipfftHandle plan,
     return result;
 }
 
-hipfftResult hipfftExecR2C(hipfftHandle plan, hipfftReal* idata, hipfftComplex* odata)
+void CheckPlacement(hipfftHandle plan, void *idata, void *odata,
+                    int64_t *reset_placement, int64_t *reset_r_strides)
 {
-    int reset_r_stride = 0;
 
-    // need to make some checks for the 2d and 3d plans
-    if ((plan->Is2D == 1) || (plan->Is3D == 1))
+    if (idata == odata) // in-place transform
       {
-        if (idata == (hipfftReal*)odata) // in-place transform
+        if (plan->placement == 1) // plan initialized to in-place
           {
-            // need to check the plan values to see if they match
-            if (plan->placement == 1)  // set for in-place transform
-              {
-                // nothing to do
-              }
-            else // set for not-in-place transform and need to change for in-place
+            *reset_r_strides = 0;
+            *reset_placement = 0;
+          }
+        else // plan initialized to not-in-place and needs to be changed
+          {
+            if ((plan->Is2D == 1) || (plan->Is3D == 1))
               {
                 // need to modify r_strides ... need to find a clean way to do this
+                std::cout << "NIP2IP: original strides ..." << std::endl;
+                std::cout << plan->r_strides[0] << " "
+                          << plan->r_strides[1] << " "
+                          << plan->r_strides[2] << " "
+                          << plan->r_strides[3] << std::endl;
+
                 int64_t r_length;
                 if (plan->Is2D == 1)
                   {
@@ -692,20 +751,37 @@ hipfftResult hipfftExecR2C(hipfftHandle plan, hipfftReal* idata, hipfftComplex* 
                     plan->r_strides[1] = plan->fft_dimensions[1]*r_length;
                   }
 
-                reset_r_stride = 1;
-                plan->placement = 1;
+                std::cout << "NIP2IP: reset strides ..." << std::endl;
+                std::cout << plan->r_strides[0] << " "
+                          << plan->r_strides[1] << " "
+                          << plan->r_strides[2] << " "
+                          << plan->r_strides[3] << std::endl;
+
+                *reset_r_strides = 1;
               }
+
+            *reset_placement = 1;
+            plan->placement = 1;
           }
-        else  // not-in-place transform
+      }
+    else // not-in-place transform
+      {
+        if (plan->placement == 0) // plan initialized to not-in-place
           {
-            // need to check the plan values to see if they match
-            if (plan->placement == 0)  // set for not-in-place transform
+            *reset_placement = 0;
+            *reset_r_strides = 0;
+          }
+        else // plan initialized to in-place and needs to be changed
+          {
+            if ((plan->Is2D == 1) || (plan->Is3D == 1))
               {
-                // nothing to do
-              }
-            else // set in-place transform and needs to be changed for not-in-place
-              { 
                 // need to modify r_strides ... need to find a clean way to do this
+                std::cout << "IP2NIP: original strides ..." << std::endl;
+                std::cout << plan->r_strides[0] << " "
+                          << plan->r_strides[1] << " "
+                          << plan->r_strides[2] << " "
+                          << plan->r_strides[3] << std::endl;
+
                 if (plan->Is2D == 1)
                   {
                     plan->r_strides[1] = plan->fft_dimensions[1];
@@ -716,83 +792,59 @@ hipfftResult hipfftExecR2C(hipfftHandle plan, hipfftReal* idata, hipfftComplex* 
                     plan->r_strides[1] = plan->fft_dimensions[1]*plan->fft_dimensions[2];
                   }
 
-                reset_r_stride = 1;
-                plan->placement = 0;
+                std::cout << "IP2NIP: reset strides ..." << std::endl;
+                std::cout << plan->r_strides[0] << " "
+                          << plan->r_strides[1] << " "
+                          << plan->r_strides[2] << " "
+                          << plan->r_strides[3] << std::endl;
+
+                *reset_r_strides = 1;
               }
+
+            *reset_placement = 1;
+            plan->placement = 0;
           }
       }
 
-    int64_t new_strides[4];
-    for (int i = 0; i < 4; i++) new_strides[i] = plan->r_strides[i];
+    return;
+}
 
-    H4I::MKLShim::fftExecR2C(plan->ctxt, plan->descSR, idata, (float _Complex *)odata);
+
+hipfftResult hipfftExecR2C(hipfftHandle plan, hipfftReal* idata, hipfftComplex* odata)
+{
+    int64_t reset_r_strides = 0;
+    int64_t reset_placement = 0;
+
+    std::cout << "hipfftExecR2C checking placement ..." << std::endl;
+    CheckPlacement(plan, (void*)idata, (void*)odata, &reset_placement, &reset_r_strides);
+
+    int64_t new_strides[4];
+    if (reset_r_strides == 1)
+      {
+        for (int i = 0; i < 4; i++) new_strides[i] = plan->r_strides[i];
+      }
+
+    H4I::MKLShim::fftExecR2C(plan->ctxt, plan->descSR, idata, (float _Complex *)odata,
+                             reset_placement, reset_r_strides, new_strides);
     return HIPFFT_SUCCESS;
 }
 
 hipfftResult hipfftExecC2R(hipfftHandle plan, hipfftComplex* idata, hipfftReal* odata)
 {
-    int reset_r_stride = 0;
+    int64_t reset_r_strides = 0;
+    int64_t reset_placement = 0;
 
-    // need to make some checks for the 2d and 3d plans
-    if ((plan->Is2D == 1) || (plan->Is3D == 1))
-      {
-        if ((hipfftReal*)idata == odata) // in-place transform
-          {
-            // need to check the plan values to see if they match
-            if (plan->placement == 1)  // set for in-place transform
-              {
-                // nothing to do
-              }
-            else // set for not-in-place transform and need to change for in-place
-              {
-                // need to modify r_strides ... need to find a clean way to do this
-                int64_t r_length;
-                if (plan->Is2D == 1)
-                  {
-                    r_length = 2*(plan->fft_dimensions[1]/2 + 1);
-                    plan->r_strides[1] = r_length;
-                  }
-                if (plan->Is3D == 1)
-                  {
-                    r_length = 2*(plan->fft_dimensions[2]/2 + 1);
-                    plan->r_strides[2] = r_length;
-                    plan->r_strides[1] = plan->fft_dimensions[1]*r_length;
-                  }
-
-                reset_r_stride = 1;
-                plan->placement = 1;
-              }
-          }
-        else  // not-in-place transform
-          {
-            // need to check the plan values to see if they match
-            if (plan->placement == 0)  // set for not-in-place transform
-              {
-                // nothing to do
-              }
-            else // set in-place transform and needs to be changed for not-in-place
-              {
-                // need to modify r_strides ... need to find a clean way to do this
-                if (plan->Is2D == 1)
-                  {
-                    plan->r_strides[1] = plan->fft_dimensions[1];
-                  }
-                if (plan->Is3D == 1)
-                  {
-                    plan->r_strides[2] = plan->fft_dimensions[2];
-                    plan->r_strides[1] = plan->fft_dimensions[1]*plan->fft_dimensions[2];
-                  }
-
-                reset_r_stride = 1;
-                plan->placement = 0;
-              }
-          }
-      }
+    std::cout << "hipfftExecC2R checking placement ..." << std::endl;
+    CheckPlacement(plan, (void*)idata, (void*)odata, &reset_placement, &reset_r_strides);
 
     int64_t new_strides[4];
-    for (int i = 0; i < 4; i++) new_strides[i] = plan->r_strides[i];
+    if (reset_r_strides == 1)
+      {
+        for (int i = 0; i < 4; i++) new_strides[i] = plan->r_strides[i];
+      }
 
-    H4I::MKLShim::fftExecC2R(plan->ctxt, plan->descSR, (float _Complex *)idata, odata);
+    H4I::MKLShim::fftExecC2R(plan->ctxt, plan->descSR, (float _Complex *)idata, odata,
+                             reset_placement, reset_r_strides, new_strides);
     return HIPFFT_SUCCESS;
 }
 
@@ -827,13 +879,39 @@ hipfftResult hipfftExecC2C(hipfftHandle plan,
 
 hipfftResult hipfftExecD2Z(hipfftHandle plan, hipfftDoubleReal* idata, hipfftDoubleComplex* odata)
 {
-    H4I::MKLShim::fftExecD2Z(plan->ctxt, plan->descDR, idata, (double _Complex *)odata);
+    int64_t reset_r_strides = 0;
+    int64_t reset_placement = 0;
+
+    std::cout << "hipfftExecD2Z checking placement ..." << std::endl;
+    CheckPlacement(plan, (void*)idata, (void*)odata, &reset_placement, &reset_r_strides);
+
+    int64_t new_strides[4];
+    if (reset_r_strides == 1)
+      {
+        for (int i = 0; i < 4; i++) new_strides[i] = plan->r_strides[i];
+      }
+
+    H4I::MKLShim::fftExecD2Z(plan->ctxt, plan->descDR, idata, (double _Complex *)odata,
+                             reset_placement, reset_r_strides, new_strides);
     return HIPFFT_SUCCESS;
 }
 
 hipfftResult hipfftExecZ2D(hipfftHandle plan, hipfftDoubleComplex* idata, hipfftDoubleReal* odata)
 {
-    H4I::MKLShim::fftExecZ2D(plan->ctxt, plan->descDR, (double _Complex *)idata, odata);
+    int64_t reset_r_strides = 0;
+    int64_t reset_placement = 0;
+
+    std::cout << "hipfftExecC2R checking placement ..." << std::endl;
+    CheckPlacement(plan, (void*)idata, (void*)odata, &reset_placement, &reset_r_strides);
+
+    int64_t new_strides[4];
+    if (reset_r_strides == 1)
+      {
+        for (int i = 0; i < 4; i++) new_strides[i] = plan->r_strides[i];
+      }
+
+    H4I::MKLShim::fftExecZ2D(plan->ctxt, plan->descDR, (double _Complex *)idata, odata,
+                             reset_placement, reset_r_strides, new_strides);
     return HIPFFT_SUCCESS;
 }
 
