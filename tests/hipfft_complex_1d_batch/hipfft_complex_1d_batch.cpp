@@ -76,14 +76,14 @@ int main(int argc, char **argv)
     
     // device memory
     // may need to make this void to deal with the hipfftExec calls
-    float *x = NULL;
+    std::complex<float> *x = NULL;
     hip_error = hipMalloc(&x, (Nbytes));
     hip_error = hipMemcpy(x, cx, Nbytes, hipMemcpyHostToDevice);
 
     // Wait for execution to finish
     hip_error = hipDeviceSynchronize();
 
-    std::complex<float>*y = NULL;
+    std::complex<float> *y = NULL;
     if (not_in_place)
       {
 	hip_error = hipMalloc(&y, Nbytes);
