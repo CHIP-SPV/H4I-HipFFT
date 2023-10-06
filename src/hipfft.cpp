@@ -13,6 +13,33 @@
 #include "h4i/mklshim/onemklfft.h"
 
 
+hipfftResult hipfftSetStream(hipfftHandle plan, hipStream_t stream)
+{
+    // this has been reused from H4I-HipBLAS with the following changes:
+    // (1) the MKLShim context pointer ctxt is stored in the hipfftHandle plan 
+    //     instead of being recast from the hipblasHandle
+    // (2) Using HIPFFT_INVALID_VALUE as the returning hipfftResult since 
+    //     hipfft doesn't have a NULLPTR value like hipBlas
+
+    if (plan != nullptr)
+    {
+        // Obtain the underlying CHIP-SPV handles.
+        // Note this code uses a CHIP-SPV extension to the HIP API.
+        // See CHIP-SPV documentation for its use.
+        // Both Level Zero and OpenCL backends currently require us
+        // to pass nHandles = 4, and provide space for at least 4 handles.
+        // TODO is there a way to query this info at runtime?
+        int nHandles = H4I::MKLShim::nHandles;
+        std::array<uintptr_t, H4I::MKLShim::nHandles> nativeHandles;
+        hipGetBackendNativeHandles(reinterpret_cast<uintptr_t>(stream),
+                nativeHandles.data(), &nHandles);
+
+        H4I::MKLShim::SetStream(plan->ctxt, nativeHandles);
+    }
+
+    return (plan != nullptr) ? HIPFFT_SUCCESS : HIPFFT_INVALID_VALUE;
+}
+
 hipfftResult hipfftCreate(hipfftHandle *plan)
 {
     // create the plan handle
