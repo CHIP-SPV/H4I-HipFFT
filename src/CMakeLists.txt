@@ -52,7 +52,6 @@ install(FILES
 			${CMAKE_BINARY_DIR}/include/hipfft-version.h
 			${CMAKE_SOURCE_DIR}/include/hipfft-export.h
                         ${CMAKE_SOURCE_DIR}/include/hipfftXt.h
-                        ${CMAKE_SOURCE_DIR}/include/hipfftHandle.h
         TYPE INCLUDE
 )
 

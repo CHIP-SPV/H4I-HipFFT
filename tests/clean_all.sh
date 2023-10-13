@@ -5,11 +5,13 @@
 
 myList=$(cat list_of_tests)
 
+rm *~
+
 for test in $myList
 do
     echo "cleaning $test ..."
     cd $test
     make -f Makefile realclean > my_clean_output
-    rm -f *.e* *.o* my_*_output *_spectrum
+    rm -f *.e* *.o* my_*_output *_spectrum my_output
     cd ../
 done
