@@ -30,8 +30,8 @@ int main(int argc, char **argv)
     result = hipfftPlan1d(&plan_r2c, nx, HIPFFT_R2C, 1);
     result = hipfftPlan1d(&plan_c2r, nx, HIPFFT_C2R, 1);
 
-    // result = hipfftSetStream(plan_r2c, stream);
-    // result = hipfftSetStream(plan_c2r, stream);
+    result = hipfftSetStream(plan_r2c, stream);
+    result = hipfftSetStream(plan_c2r, stream);
     
     std::cout << std::scientific << std::setprecision(8);
 
@@ -125,8 +125,6 @@ int main(int argc, char **argv)
 
     // Wait for events assigned to the stream to finish;
     hip_error = hipStreamSynchronize(stream);
-
-    // result = hipfftSetStream(plan_c2r, stream);
 
     // compute the inverse transform
     if (not_in_place)
