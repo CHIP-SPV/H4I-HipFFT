@@ -10,3 +10,4 @@ hipfft_real_3d
 hipfft_double_real_3d
 hipfft_complex_3d
 hipfft_double_complex_3d
+hipfft_real_1d_stream
