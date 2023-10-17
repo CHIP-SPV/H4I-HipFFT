@@ -4,7 +4,7 @@
 #include <fstream>
 #include "math.h"
 #include <complex>
-#include "hipfft.h"
+#include "hipfft/hipfft.h"
 // #include "hip/hip_runtime.h"
 // #include "hip/hip_interop.h"
 
