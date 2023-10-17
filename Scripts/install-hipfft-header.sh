@@ -12,8 +12,8 @@ srcdir=$1
 bindir=$2
 instdir=$3
 
-mkdir -p $bindir/include
-cp $srcdir/library/include/hipfft/hipfft.h $bindir/include/
+mkdir -p $bindir/include/hipfft
+cp $srcdir/library/include/hipfft/hipfft.h $bindir/include/hipfft/
 mkdir -p $instdir/share/licenses
 cp $srcdir/LICENSE.md $instdir/share/licenses/hipfft.h.LICENSE.md
 

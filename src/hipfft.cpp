@@ -5,7 +5,7 @@
 #include "math.h"
 #include <complex>
 #include <vector>
-#include "hipfft.h"
+#include "hipfft/hipfft.h"
 #include "hip/hip_runtime.h"
 #include "hip/hip_interop.h"
 #include "h4i/mklshim/mklshim.h"
