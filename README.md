@@ -7,8 +7,8 @@ This is the initial version of the H4I-HipFFT layer to use hipfft on Intel GPUs.
 ## Getting started: Build H4I-MKLSHim with the following steps:
 
 (1) Clone the develop branch of H4I-MKLShim         
-(2) Source the mklshim_files/setUpModules.sh script to load the appropriate modules         
-(3) Build H4I-MKLShim ... can use the mklshim_files/build_mklshim.sh script after customizing INSTALL_DIR
+(2) Source the setUpModules.sh script to load the appropriate modules         
+(3) Build H4I-MKLShim ... can use the build_mklshim.sh script after customizing INSTALL_DIR
 
 
 ## Build the H4I-HipFFT library:
