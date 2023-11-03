@@ -14,7 +14,7 @@ This is the initial version of the H4I-HipFFT layer to use hipfft on Intel GPUs.
 ## Build the H4I-HipFFT library:
 
 (1) Clone the develop branch of this repo         
-(2) Source setUpModules.sh if you haven't already done so
+(2) Source setUpModules.sh if you haven't already done so           
 (3) Edit the h4i-hipfft/build_hipfft.sh script for your environment             
 (4) Run the build_hipfft.sh (the INSTALL_DIR should be customized in the step above)
 
