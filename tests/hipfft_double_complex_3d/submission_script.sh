@@ -12,7 +12,7 @@
 cd /home/nicholsds/FROM_CHIPSTAR/H4I-HipFFT/tests/hipfft_double_complex_3d
 #echo $PWD
 
-source ./setUpModules.sh
+source ../setUpModules.sh
 module list
 
 exec=./hipfft_double_complex_3d.x

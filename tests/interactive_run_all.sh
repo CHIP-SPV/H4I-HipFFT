@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # set the env
-#source setUpModules.sh
+source ./setUpModules.sh
 
 myList=$(cat list_of_tests)
 

@@ -1,0 +1,34 @@
+
+INCLUDE_PATH =
+
+## uncomment if you do NOT have any of the intel env defined
+#INCLUDE_PATH += -I$(MKL_ROOT)/include
+
+## needed to find the mklshim and hipfft headers
+INCLUDE_PATH += -I$(HIPFFT_PATH)/include
+INCLUDE_PATH += -I$(MKLSHIM_PATH)/include
+
+## I think libmkl_intel_lp64 allows 32 bit ints but libmkl_intel_ilp64 requires
+## 64 bit ints ... key word here is "think" ... need to read the intel docs again
+LDFLAGS =
+LDFLAGS += -L$(MKL_ROOT)/lib/intel64 -lmkl_sycl -lmkl_core -lmkl_intel_thread -lmkl_intel_lp64
+#LDFLAGS += -L$(MKL_ROOT)/lib/intel64 -lmkl_sycl -lmkl_core -lmkl_intel_thread -lmkl_intel_ilp64
+
+#LDFLAGS += -L$(HIP_PATH)/lib -lCHIP
+LDFLAGS += -L$(HIP_PATH)/lib64 -lCHIP
+LDFLAGS += -Wl,-rpath,$(MKLSHIM_PATH)/lib64
+LDFLAGS += -L$(MKLSHIM_PATH)/lib64 -lMKLShim
+LDFLAGS += -Wl,-rpath,$(HIPFFT_PATH)/lib64
+LDFLAGS += -L$(HIPFFT_PATH)/lib64 -lHipFFT
+
+## for chipstar
+DEFINES=-D__HIP_PLATFORM_SPIRV__
+
+## -fopenmp to allow the use of omp_get_wtime() for timings ... if desired
+OPENMP_FLAG=-fopenmp -fsycl
+OPT_FLAGS=-O3 -std=c++17
+
+#LD=icpx
+#CXX=icpx
+LD=clang++
+CXX=clang++

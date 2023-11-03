@@ -1,9 +1,6 @@
 #!/bin/bash
 
 # set the env
-#source setUpModules.sh
-
-#export LD_LIBRARY_PATH=/home/ac.nichols/H4I/INSTALLATION/MKLSHIM_WITH_FFT/lib64:${LD_LIBRARY_PATH}
-#ldd hipfft.x
+source ../setUpModules.sh
 
 ./hipfft_complex_3d.x

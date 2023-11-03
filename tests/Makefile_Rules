@@ -1,0 +1,14 @@
+
+
+%.o: %.cpp
+	$(CXX) -c -o $@ $< $(OPT_FLAGS) $(CFLAGS) $(OPENMP_FLAG) $(INCLUDE_PATH) $(DEFINES)
+
+$(EXE) : $(OBJS)
+	$(LD) $(OBJS) $(OPENMP_FLAG) $(LDFLAGS) -o $@
+
+clean:
+	rm -f *.x *.o
+
+realclean:
+	make clean
+	rm -f *.mod *.s *~ include/*~ *_spectrum

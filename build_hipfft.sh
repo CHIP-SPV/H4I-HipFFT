@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#source setUpModules.sh
+source setUpModules.sh
 
 module list
 
@@ -11,11 +11,18 @@ echo $CC
 echo $CXX
 
 export BASE_DIR=${PWD}
-export INSTALL_DIR="/home/nicholsds/FROM_CHIPSTAR/INSTALLATION/H4I-HIPFFT"
+export INSTALL_DIR="${HIPFFT_PATH}"
 
 echo ${BASE_DIR}
 
-#cd cmake-h4i-hipfft
+
+if [ ! -d "H4I-HipFFT" ]; then
+   git clone https://github.com/CHIP-SPV/H4I-HipFFT.git
+   cd H4I-HipFFT
+   git checkout develop
+   cd ../
+fi
+
 cd H4I-HipFFT
 
 if [ ! -d "build" ]; then
@@ -29,8 +36,11 @@ pwd
 #exit
 
 
-export MKL_DIR=$MKLROOT
-export MKLShim_DIR="/home/nicholsds/FROM_CHIPSTAR/INSTALLATION/MKLSHIM_DEVELOP"
+## no longer needed, but kept here for a reminder
+#export MKL_DIR=$MKLROOT
+
+## for cmake to find mklshim ...
+export MKLShim_DIR="${MKLSHIM_PATH}"
 
 cmake ../ \
       -D CMAKE_CXX_COMPILER=$CXX \
