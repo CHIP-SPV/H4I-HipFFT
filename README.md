@@ -26,7 +26,9 @@ This is the initial version of the H4I-HipFFT layer to use hipfft on Intel GPUs.
 (4) Edit the makefile to use the path to your H4I-MKLShim and H4I-HipFFT installations          
 (5) Use the build.sh script to build the 1d test code           
 (6) Use the run_it.sh code to test ... should see an error of ~1.0e-7           
-(7) Follow this process for all the other tests
+(7) Follow this process for all the other tests             
+(8) To build all the tests at once, use the build_all.sh script in the test directory               
+
 
 
 
