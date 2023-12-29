@@ -3,6 +3,8 @@
 #module load oneapi/eng-compiler/2023.05.15.007
 #module load oneapi/eng-compiler/2023.10.15.002
 
+module load oneapi/eng-compiler/2023.05.15.006
+
 module use /home/pvelesko/modulefiles/
 
 module load HIP/chipStar/llvm16/1.0/release

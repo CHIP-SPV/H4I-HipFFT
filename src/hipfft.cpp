@@ -33,7 +33,8 @@ struct hipfftHandle_t
     int starting_domain = 0;
 
     // in-place (1) or not-in-place (0) 
-    int placement = 1;
+    // int placement = 1;
+    int placement = 0;
 
     // foward (1) or inverse (0) fft
     int fft_direction = 1;
@@ -191,32 +192,38 @@ hipfftResult hipfftMakePlan1d(hipfftHandle plan,
     // pre-set result
     hipfftResult result = HIPFFT_SUCCESS;
 
+    plan->placement = 0;
+
     // create the appropriate descriptor for the fft plan
     switch (type)
     {
        case HIPFFT_R2C:
        case HIPFFT_C2R:
        {
-	  auto *desc = H4I::MKLShim::createFFTDescriptorSR(plan->ctxt,nx);
+	  auto *desc = H4I::MKLShim::createFFTDescriptorSR(plan->ctxt,nx,
+                                                           plan->placement);
 	  plan->descSR = desc;
           break;
        }
        case HIPFFT_D2Z:
        case HIPFFT_Z2D:
        {
-	  auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,nx);
+	  auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,nx,
+                                                           plan->placement);
           plan->descDR = desc;
           break;
        }
        case HIPFFT_C2C:
        {
-	  auto *desc = H4I::MKLShim::createFFTDescriptorSC(plan->ctxt,nx);
+	  auto *desc = H4I::MKLShim::createFFTDescriptorSC(plan->ctxt,nx,
+                                                           plan->placement);
           plan->descSC = desc;
           break;
        }
        case HIPFFT_Z2Z:
        {
-	  auto *desc = H4I::MKLShim::createFFTDescriptorDC(plan->ctxt,nx);
+	  auto *desc = H4I::MKLShim::createFFTDescriptorDC(plan->ctxt,nx,
+                                                           plan->placement);
           plan->descDC = desc;
           break;
        }
@@ -299,43 +306,50 @@ hipfftResult hipfftMakePlan2d(hipfftHandle plan,
     std::vector<std::int64_t> dimensions {(int64_t)nx, (int64_t)ny};
 
     plan->Is2D = 1;
+    plan->placement = 1;
 
     // create the appropriate descriptor for the fft plan
     switch (type)
     {
        case HIPFFT_R2C:
        {
-          auto *desc = H4I::MKLShim::createFFTDescriptorSR(plan->ctxt,dimensions);
+          auto *desc = H4I::MKLShim::createFFTDescriptorSR(plan->ctxt,dimensions,
+                                                           plan->placement);
           plan->descSR = desc;
           break;
        }
        case HIPFFT_C2R:
        {
-          auto *desc = H4I::MKLShim::createFFTDescriptorSR(plan->ctxt,dimensions);
+          auto *desc = H4I::MKLShim::createFFTDescriptorSR(plan->ctxt,dimensions,
+                                                           plan->placement);
           plan->descSR = desc;
           break;
        }
        case HIPFFT_D2Z:
        {
-          auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,dimensions);
+          auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,dimensions,
+                                                           plan->placement);
           plan->descDR = desc;
           break;
        }
        case HIPFFT_Z2D:
        {
-          auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,dimensions);
+          auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,dimensions,
+                                                           plan->placement);
           plan->descDR = desc;
           break;
        }
        case HIPFFT_C2C:
        {
-          auto *desc = H4I::MKLShim::createFFTDescriptorSC(plan->ctxt,dimensions);
+          auto *desc = H4I::MKLShim::createFFTDescriptorSC(plan->ctxt,dimensions,
+                                                           plan->placement);
           plan->descSC = desc;
           break;
        }
        case HIPFFT_Z2Z:
        {
-          auto *desc = H4I::MKLShim::createFFTDescriptorDC(plan->ctxt,dimensions);
+          auto *desc = H4I::MKLShim::createFFTDescriptorDC(plan->ctxt,dimensions,
+                                                           plan->placement);
           plan->descDC = desc;
           break;
        }
@@ -397,6 +411,7 @@ hipfftResult hipfftMakePlan3d(hipfftHandle plan,
     std::vector<std::int64_t> dimensions {(int64_t)nx, (int64_t)ny, (int64_t)nz};
 
     plan->Is3D = 1;
+    plan->placement = 1;
 
     // create the appropriate descriptor for the fft plan
     switch (type)
@@ -430,7 +445,8 @@ hipfftResult hipfftMakePlan3d(hipfftHandle plan,
           }
 
           auto *desc = H4I::MKLShim::createFFTDescriptorSR(plan->ctxt,dimensions,
-                                                           in_strides,out_strides);
+                                                           in_strides,out_strides,
+                                                           plan->placement);
           plan->descSR = desc;
 
           break;
@@ -464,7 +480,8 @@ hipfftResult hipfftMakePlan3d(hipfftHandle plan,
           }
 
           auto *desc = H4I::MKLShim::createFFTDescriptorSR(plan->ctxt,dimensions,
-                                                           in_strides,out_strides);
+                                                           in_strides,out_strides,
+                                                           plan->placement);
           plan->descSR = desc;
           break;
        }
@@ -497,7 +514,8 @@ hipfftResult hipfftMakePlan3d(hipfftHandle plan,
           }
 
           auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,dimensions,
-                                                           in_strides,out_strides);
+                                                           in_strides,out_strides,
+                                                           plan->placement);
           plan->descDR = desc;
           break;
        }
@@ -530,19 +548,22 @@ hipfftResult hipfftMakePlan3d(hipfftHandle plan,
           }
 
           auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,dimensions,
-                                                           in_strides,out_strides);
+                                                           in_strides,out_strides,
+                                                           plan->placement);
           plan->descDR = desc;
           break;
        }
        case HIPFFT_C2C:
        {
-          auto *desc = H4I::MKLShim::createFFTDescriptorSC(plan->ctxt,dimensions);
+          auto *desc = H4I::MKLShim::createFFTDescriptorSC(plan->ctxt,dimensions,
+                                                           plan->placement);
           plan->descSC = desc;
           break;
        }
        case HIPFFT_Z2Z:
        {
-          auto *desc = H4I::MKLShim::createFFTDescriptorDC(plan->ctxt,dimensions);
+          auto *desc = H4I::MKLShim::createFFTDescriptorDC(plan->ctxt,dimensions,
+                                                           plan->placement);
           plan->descDC = desc;
           break;
        }
@@ -649,12 +670,15 @@ hipfftResult hipfftMakePlanMany(hipfftHandle plan,
     int64_t input_stride, output_stride;
     int64_t number_of_transforms;
 
+    plan->placement = 0;
+
     // create the appropriate descriptor for the fft plan and then set plan values
     switch (type)
     {
        case HIPFFT_R2C:
        {
-          auto *desc = H4I::MKLShim::createFFTDescriptorSR(plan->ctxt,dimensions);
+          auto *desc = H4I::MKLShim::createFFTDescriptorSR(plan->ctxt,dimensions,
+                                                           plan->placement);
 
           // set parameters for intel onemkl fft with real starting domain
           fwd_distance = (int64_t)idist;
@@ -674,7 +698,8 @@ hipfftResult hipfftMakePlanMany(hipfftHandle plan,
        }
        case HIPFFT_C2R:
        {
-          auto *desc = H4I::MKLShim::createFFTDescriptorSR(plan->ctxt,dimensions);
+          auto *desc = H4I::MKLShim::createFFTDescriptorSR(plan->ctxt,dimensions,
+                                                           plan->placement);
                                 
           // need to reverse the istride/ostride and idist/odist values to 
           // account for the way Intel OneMKL FFT handles the forward and 
@@ -699,7 +724,8 @@ hipfftResult hipfftMakePlanMany(hipfftHandle plan,
        }
        case HIPFFT_D2Z:
        {
-          auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,dimensions);
+          auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,dimensions,
+                                                           plan->placement);
 
           // set parameters for intel onemkl fft with real starting domain
           fwd_distance = (int64_t)idist;
@@ -717,7 +743,8 @@ hipfftResult hipfftMakePlanMany(hipfftHandle plan,
        }
        case HIPFFT_Z2D:
        {
-          auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,dimensions);
+          auto *desc = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt,dimensions,
+                                                           plan->placement);
 
           // need to reverse the istride/ostride and idist/odist values to 
           // account for the way Intel OneMKL FFT handles the forward and 
@@ -741,7 +768,8 @@ hipfftResult hipfftMakePlanMany(hipfftHandle plan,
        }
        case HIPFFT_C2C:
        {
-          auto *desc = H4I::MKLShim::createFFTDescriptorSC(plan->ctxt,dimensions);
+          auto *desc = H4I::MKLShim::createFFTDescriptorSC(plan->ctxt,dimensions,
+                                                           plan->placement);
 
           // set parameters for intel onemkl fft with a complex starting domain
           fwd_distance = (int64_t)idist;
@@ -760,7 +788,8 @@ hipfftResult hipfftMakePlanMany(hipfftHandle plan,
        }
        case HIPFFT_Z2Z:
        {
-          auto *desc = H4I::MKLShim::createFFTDescriptorDC(plan->ctxt,dimensions);
+          auto *desc = H4I::MKLShim::createFFTDescriptorDC(plan->ctxt,dimensions,
+                                                           plan->placement);
 
           // set parameters for intel onemkl fft with a complex starting domain
           fwd_distance = (int64_t)idist;
@@ -803,11 +832,11 @@ void CheckPlacement(hipfftHandle plan, void *idata, void *odata,
             if ((plan->Is2D == 1) || (plan->Is3D == 1))
               {
                 // need to modify r_strides ... need to find a clean way to do this
-                std::cout << "NIP2IP: original strides ..." << std::endl;
-                std::cout << plan->r_strides[0] << " "
-                          << plan->r_strides[1] << " "
-                          << plan->r_strides[2] << " "
-                          << plan->r_strides[3] << std::endl;
+                // std::cout << "NIP2IP: original strides ..." << std::endl;
+                // std::cout << plan->r_strides[0] << " "
+                //           << plan->r_strides[1] << " "
+                //           << plan->r_strides[2] << " "
+                //           << plan->r_strides[3] << std::endl;
 
                 int64_t r_length;
                 if (plan->Is2D == 1)
@@ -822,16 +851,20 @@ void CheckPlacement(hipfftHandle plan, void *idata, void *odata,
                     plan->r_strides[1] = plan->fft_dimensions[1]*r_length;
                   }
 
-                std::cout << "NIP2IP: reset strides ..." << std::endl;
-                std::cout << plan->r_strides[0] << " "
-                          << plan->r_strides[1] << " "
-                          << plan->r_strides[2] << " "
-                          << plan->r_strides[3] << std::endl;
+                // std::cout << "NIP2IP: reset strides ..." << std::endl;
+                // std::cout << plan->r_strides[0] << " "
+                //           << plan->r_strides[1] << " "
+                //           << plan->r_strides[2] << " "
+                //           << plan->r_strides[3] << std::endl;
 
                 *reset_r_strides = 1;
+                *reset_placement = 1;
               }
 
-            *reset_placement = 1;
+            // this causes problems with some 1d transforms but hasn't been needed in testing
+            // although the intel docs say that it's needed
+            // *reset_placement = 1;
+
             plan->placement = 1;
           }
       }
@@ -847,11 +880,11 @@ void CheckPlacement(hipfftHandle plan, void *idata, void *odata,
             if ((plan->Is2D == 1) || (plan->Is3D == 1))
               {
                 // need to modify r_strides ... need to find a clean way to do this
-                std::cout << "IP2NIP: original strides ..." << std::endl;
-                std::cout << plan->r_strides[0] << " "
-                          << plan->r_strides[1] << " "
-                          << plan->r_strides[2] << " "
-                          << plan->r_strides[3] << std::endl;
+                // std::cout << "IP2NIP: original strides ..." << std::endl;
+                // std::cout << plan->r_strides[0] << " "
+                //           << plan->r_strides[1] << " "
+                //           << plan->r_strides[2] << " "
+                //           << plan->r_strides[3] << std::endl;
 
                 if (plan->Is2D == 1)
                   {
@@ -863,16 +896,20 @@ void CheckPlacement(hipfftHandle plan, void *idata, void *odata,
                     plan->r_strides[1] = plan->fft_dimensions[1]*plan->fft_dimensions[2];
                   }
 
-                std::cout << "IP2NIP: reset strides ..." << std::endl;
-                std::cout << plan->r_strides[0] << " "
-                          << plan->r_strides[1] << " "
-                          << plan->r_strides[2] << " "
-                          << plan->r_strides[3] << std::endl;
+                // std::cout << "IP2NIP: reset strides ..." << std::endl;
+                // std::cout << plan->r_strides[0] << " "
+                //           << plan->r_strides[1] << " "
+                //           << plan->r_strides[2] << " "
+                //           << plan->r_strides[3] << std::endl;
 
                 *reset_r_strides = 1;
+                *reset_placement = 1;
               }
 
-            *reset_placement = 1;
+            // this causes problems with some 1d transforms but hasn't been needed in testing
+            // although the intel docs say that it's needed
+            // *reset_placement = 1;
+
             plan->placement = 0;
           }
       }
@@ -886,7 +923,6 @@ hipfftResult hipfftExecR2C(hipfftHandle plan, hipfftReal* idata, hipfftComplex* 
     int64_t reset_r_strides = 0;
     int64_t reset_placement = 0;
 
-    std::cout << "hipfftExecR2C checking placement ..." << std::endl;
     CheckPlacement(plan, (void*)idata, (void*)odata, &reset_placement, &reset_r_strides);
 
     int64_t new_strides[4];
@@ -897,6 +933,7 @@ hipfftResult hipfftExecR2C(hipfftHandle plan, hipfftReal* idata, hipfftComplex* 
 
     H4I::MKLShim::fftExecR2C(plan->ctxt, plan->descSR, idata, (float _Complex *)odata,
                              reset_placement, reset_r_strides, new_strides);
+
     return HIPFFT_SUCCESS;
 }
 
@@ -905,7 +942,6 @@ hipfftResult hipfftExecC2R(hipfftHandle plan, hipfftComplex* idata, hipfftReal* 
     int64_t reset_r_strides = 0;
     int64_t reset_placement = 0;
 
-    std::cout << "hipfftExecC2R checking placement ..." << std::endl;
     CheckPlacement(plan, (void*)idata, (void*)odata, &reset_placement, &reset_r_strides);
 
     int64_t new_strides[4];
@@ -953,7 +989,6 @@ hipfftResult hipfftExecD2Z(hipfftHandle plan, hipfftDoubleReal* idata, hipfftDou
     int64_t reset_r_strides = 0;
     int64_t reset_placement = 0;
 
-    std::cout << "hipfftExecD2Z checking placement ..." << std::endl;
     CheckPlacement(plan, (void*)idata, (void*)odata, &reset_placement, &reset_r_strides);
 
     int64_t new_strides[4];
@@ -972,7 +1007,6 @@ hipfftResult hipfftExecZ2D(hipfftHandle plan, hipfftDoubleComplex* idata, hipfft
     int64_t reset_r_strides = 0;
     int64_t reset_placement = 0;
 
-    std::cout << "hipfftExecC2R checking placement ..." << std::endl;
     CheckPlacement(plan, (void*)idata, (void*)odata, &reset_placement, &reset_r_strides);
 
     int64_t new_strides[4];

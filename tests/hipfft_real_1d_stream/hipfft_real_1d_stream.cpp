@@ -13,7 +13,7 @@ int main(int argc, char **argv)
     hipfftHandle plan_r2c;
     hipfftHandle plan_c2r;
 
-    int not_in_place = 0;
+    int not_in_place = 1;
     int nx = 16; 
     int ny = 16;
     int N_alloc;
@@ -102,30 +102,6 @@ int main(int argc, char **argv)
     // Wait for execution to finish
     hip_error = hipDeviceSynchronize();
 
-    // Copy result back to host
-    if (not_in_place)
-      {
-        hip_error = hipMemcpy(cy, y, Nbytes, hipMemcpyDeviceToHost);
-      }
-    else
-      {
-        hip_error = hipMemcpy(cy, x, Nbytes, hipMemcpyDeviceToHost);
-      }
-
-    // Wait for execution to finish
-    hip_error = hipDeviceSynchronize();
-
-    // print the transformed array
-    std::cout << std::endl << "Array after the forward FFT: " << std::endl;
-    for (int i = 0; i < nx; i++)
-      {
-        std::cout << cy[i] << std::endl;
-      }
-    std::cout << std::endl;
-
-    // Wait for events assigned to the stream to finish;
-    hip_error = hipStreamSynchronize(stream);
-
     // compute the inverse transform
     if (not_in_place)
       {
@@ -150,14 +126,6 @@ int main(int argc, char **argv)
 
     // Wait for execution to finish
     hip_error = hipDeviceSynchronize();
-
-    // print the final array
-    std::cout << std::endl << "Array after the backward FFT: " << std::endl;
-    for (int i = 0; i < nx; i++)
-      {
-        std::cout << cy[i] << std::endl;
-      }
-    std::cout << std::endl;
 
     //  error check
     double local_error = 0.0;
