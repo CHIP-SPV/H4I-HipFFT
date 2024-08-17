@@ -2,6 +2,20 @@
 # See LICENSE.txt in the root of the source distribution for license info.
 
 cmake_minimum_required(VERSION 3.20)
+
+# Check if INTEL_COMPILER_PATH was passed to CMake invocation, if not, look for icpx in PATH
+if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+    find_program(INTEL_COMPILER_PATH icpx)
+    if(INTEL_COMPILER_PATH)
+        set(CMAKE_CXX_COMPILER ${INTEL_COMPILER_PATH})
+        set(CMAKE_CXX_COMPILER_ID "IntelLLVM")
+        message(STATUS "Found Intel C++ Compiler: ${INTEL_COMPILER_PATH}")
+    else()
+        message(WARNING "Intel C++ Compiler (icpx) not found. Using default compiler.")
+    endif()
+endif()
+
+# Must be after setting CMAKE_CXX_COMPILER to intel otherwise it will go into an infinite loop
 project(hipFFT
     VERSION 1.0.0
     LANGUAGES CXX)
@@ -24,17 +38,7 @@ endif()
 message(STATUS "hipFFT will be installed to: ${CMAKE_INSTALL_PREFIX}")
 
 
-# Check if INTEL_COMPILER_PATH was passed to CMake invocation, if not, look for icpx in PATH
-if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
-    find_program(INTEL_COMPILER_PATH icpx)
-    if(INTEL_COMPILER_PATH)
-        set(CMAKE_CXX_COMPILER ${INTEL_COMPILER_PATH})
-        set(CMAKE_CXX_COMPILER_ID "IntelLLVM")
-        message(STATUS "Found Intel C++ Compiler: ${INTEL_COMPILER_PATH}")
-    else()
-        message(WARNING "Intel C++ Compiler (icpx) not found. Using default compiler.")
-    endif()
-endif()
+
 
 # Select SPIR-V platform
 add_compile_definitions(__HIP_PLATFORM_SPIRV__)
