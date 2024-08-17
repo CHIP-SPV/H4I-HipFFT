@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -18,13 +17,21 @@ hipfftResult hipfftCreate(hipfftHandle *plan)
     // create the plan handle
     hipfftHandle h = new hipfftHandle_t;
 
-    // HIP supports multiple backends hence query current backend name
-    auto backendName = hipGetBackendName();
-    // Obtain the handles to the back handlers.
-    unsigned long handles[4];
-    int           nHandles = 4;
-    hipGetBackendNativeHandles((uintptr_t)NULL, handles, &nHandles);
-    auto *ctxt = H4I::MKLShim::Create(handles, nHandles, backendName);
+    int nHandles;
+    hipGetBackendNativeHandles((uintptr_t)0, 0, &nHandles);
+
+    // Replace VLA with std::vector
+    std::vector<unsigned long> handles(nHandles);
+    hipGetBackendNativeHandles((uintptr_t)NULL, handles.data(), 0);
+    char* backendName = (char*)handles[0];
+    // New implementation of hipGetBackendNativeHandles keep backend name in the Native handles
+    // Removing backend name from the list to make it sync to older native handle. This will help Shim layer remains unchanged
+    for(auto i=1; i<nHandles; ++i) {
+        handles[i-1] = handles[i];
+    }
+    handles[nHandles-1] = 0;
+    nHandles--;
+    auto *ctxt = H4I::MKLShim::Create(handles.data(), nHandles, backendName);
 
     // assign h->ctxt to use a consistent queue context with CHIP-SPV
     h->ctxt = ctxt;
@@ -263,4 +270,3 @@ hipfftResult hipfftExecC2C(hipfftHandle plan,
 
     return result;
 };
-
