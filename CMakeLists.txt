@@ -65,9 +65,10 @@ add_library(hipfft SHARED
 # Link against MKL and other required libraries
 target_link_libraries(hipfft
     PUBLIC
-        MKL::MKL
         CHIP
         MKLShim
+    PRIVATE
+        MKL::MKL
 )
 
 # Set properties for the hipfft target
@@ -81,7 +82,7 @@ target_compile_options(hipfft PRIVATE -fsycl)
 target_link_options(hipfft PRIVATE -fsycl)
 
 # Add the directory containing hipfftHandle.h to the include directories
-target_include_directories(hipfft PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(hipfft PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Installation rules
 install(TARGETS hipfft
