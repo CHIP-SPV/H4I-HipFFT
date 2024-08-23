@@ -1,35 +1,25 @@
 # H4I-HipFFT
 
-## Description
+H4I-HipFFT is a library that provides HipFFT functionality for Intel GPUs. It's built on top of the H4I-MKLShim library and uses Intel's oneAPI MKL for FFT operations.
 
-This is the initial version of the H4I-HipFFT layer to use hipfft on Intel GPUs. It has been tested on the JLSE Iris nodes.
+## Prerequisites
 
-## Getting started: Build H4I-MKLSHim with the following steps:
+- Intel oneAPI Base Toolkit
+- H4I-MKLShim library (added here as a submodule)
 
-(1) Clone the develop branch of H4I-MKLShim         
-(2) Copy the files in the h4i-hipfft/mklshim_files/include/h4i/mklshim and h4i-hipfft/mklshim_files/src directories 
-into the H4I-MKLSHIM/include/h4i/mklshim and H4I-MKLSHIM/src directories            
-(3) Source the mklshim_files/setUpModules.sh script to load the appropriate modules         
-(4) Build H4I-MKLShim ... can use the mklshim_files/build_mklshim.sh script after customizing INSTALL_DIR
+## Building
 
+The best way to build this library is to build it as a part of chipStar. 
+- Add `-DCHIP_BUILD_HIPFFT=ON` during chipStar configure
 
-## Build the H4I-HipFFT library (current version uses make, switching to cmake soon):
+Alternatively, this library can also be built using a pre-built chipStar
+- Either set `hip_DIR` to chipStar install location or add a path to `CMAKE_PREFIX_PATH`
+e.x. :
 
-(1) Clone this repo         
-(2) Source setUpModules.sh (not necessary if you already did this when building H4I-MKLShim)            
-(3) Enter the src directory         
-(4) Edit the makefile to use the path to your H4I-MKLShim installation          
-(5) Run the build.sh script: this will build the hipfft.so library and install the headers and library in the directory specified in the build script (the INSTALL_DIR should be customized)
-
-## Build the test code(s) and test (current version uses make, switching to cmake soon):
-
-(1) Enter the tests directory           
-(2) Enter the hipfft_1d directory           
-(3) Edit the makefile to use the path to your H4I-MKLShim and H4I-HipFFT installations          
-(4) Use the build.sh script to build the 1d test code           
-(5) Use the run_it.sh code to test ... should see an error of ~1.0e-7           
-(6) more tests will be added soon
-
-
-
-
+```
+hip_DIR=~/space/install/HIP/chipStar/2024.07.31 cmake ../
+```
+or 
+```
+cmake ../ -DCMAKE_PREFIX_PATH=~/space/install/HIP/chipStar/2024.07.31/lib/cmake/hip
+```
