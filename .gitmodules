@@ -1,3 +1,4 @@
 [submodule "H4I-MKLShim"]
 	path = H4I-MKLShim
-	url = git@github.com:CHIP-SPV/H4I-MKLShim.git
+	url = https://github.com/CHIP-SPV/H4I-MKLShim.git
+	branch = origin/develop
