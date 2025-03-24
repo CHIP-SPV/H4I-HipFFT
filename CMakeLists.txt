@@ -1,6 +1,6 @@
 # Copyright 2021-2023 UT-Battelle
 # See LICENSE.txt in the root of the source distribution for license info.
-cmake_minimum_required(VERSION 3.23)
+cmake_minimum_required(VERSION 3.21)
 include (${CMAKE_SOURCE_DIR}/CMake/HipFFTVersion.cmake)
 project(HipFFT
     VERSION ${HipFFT_VERSION}
@@ -48,4 +48,7 @@ add_subdirectory(src)
 #if(BUILD_TESTING)
 #    add_subdirectory(tests)
 #endif()
+
+# Always build samples
+add_subdirectory(samples)
 
