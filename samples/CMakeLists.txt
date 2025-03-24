@@ -12,4 +12,4 @@ endif()
 install(TARGETS fft_basic_test DESTINATION bin)
 
 # Add the test to CTest
-add_test(NAME hipfft_basic_context_test COMMAND fft_basic_test) 
+add_test(NAME h4i-hipfft_basic_context_test COMMAND fft_basic_test) 
