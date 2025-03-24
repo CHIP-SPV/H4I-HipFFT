@@ -1,7 +1,9 @@
 # Copyright 2021-2023 UT-Battelle
 # See LICENSE.txt in the root of the source distribution for license info.
 cmake_minimum_required(VERSION 3.21)
-include (${CMAKE_SOURCE_DIR}/CMake/HipFFTVersion.cmake)
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/CMake/HipFFTVersion.cmake)
+
 project(HipFFT
     VERSION ${HipFFT_VERSION}
     LANGUAGES CXX)
@@ -9,7 +11,13 @@ project(HipFFT
 
 # We will use HIP in some fashion, no matter which platform
 # we're targeting or what parts of the software we're building.
-find_package(HIP REQUIRED)
+if(POLICY CMP0077)
+  cmake_policy(SET CMP0077 NEW)
+endif()
+set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+if(STANDALONE_BUILD AND NOT TARGET hip::host)
+  find_package(hip CONFIG REQUIRED)
+endif()
 # When using CHIP-SPV, CMake's method for finding a HIP compiler
 # seems to want to find ROCm.  Since ROCm isn't in play, CMake
 # fails to enable support for HIP as a first class language.
