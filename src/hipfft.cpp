@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -68,18 +67,13 @@ hipfftResult hipfftSetStream(hipfftHandle plan, hipStream_t stream)
 
     if (plan != nullptr)
     {
-        // Obtain the underlying CHIP-SPV handles.
-        // Note this code uses a CHIP-SPV extension to the HIP API.
-        // See CHIP-SPV documentation for its use.
-        // Both Level Zero and OpenCL backends currently require us
-        // to pass nHandles = 4, and provide space for at least 4 handles.
-        // TODO is there a way to query this info at runtime?
-        int nHandles = H4I::MKLShim::nHandles;
-        std::array<uintptr_t, H4I::MKLShim::nHandles> nativeHandles;
-        hipGetBackendNativeHandles(reinterpret_cast<uintptr_t>(stream),
-                nativeHandles.data(), &nHandles);
-
-        H4I::MKLShim::SetStream(plan->ctxt, nativeHandles);
+        // Get native handles from stream
+        int nHandles;
+        hipGetBackendNativeHandles(reinterpret_cast<uintptr_t>(stream), 0, &nHandles);
+        unsigned long handles[nHandles];
+        hipGetBackendNativeHandles(reinterpret_cast<uintptr_t>(stream), handles, 0);
+        // Backend name is already at index BACKEND_NAME (0), no need to modify handles array
+        H4I::MKLShim::SetStream(plan->ctxt, handles, nHandles);
     }
 
     return (plan != nullptr) ? HIPFFT_SUCCESS : HIPFFT_INVALID_VALUE;
@@ -90,13 +84,18 @@ hipfftResult hipfftCreate(hipfftHandle *plan)
     // create the plan handle
     hipfftHandle h = new hipfftHandle_t;
 
-    // HIP supports multiple backends hence query current backend name
-    auto backendName = hipGetBackendName();
-    // Obtain the handles to the back handlers.
-    unsigned long handles[4];
-    int           nHandles = 4;
-    hipGetBackendNativeHandles((uintptr_t)NULL, handles, &nHandles);
-    auto *ctxt = H4I::MKLShim::Create(handles, nHandles, backendName);
+    #ifdef hipGetBackendName
+    std::cerr << "Error: The hipGetBackendName API is deprecated. Please update your H4I-MKLShim to use the latest API." << std::endl;
+    delete h;
+    return HIPFFT_INVALID_VALUE;
+    #endif
+
+    // Get native handles
+    int nHandles;
+    hipGetBackendNativeHandles((uintptr_t)0, 0, &nHandles);
+    unsigned long handles[nHandles];
+    hipGetBackendNativeHandles((uintptr_t)NULL, handles, 0);
+    auto *ctxt = H4I::MKLShim::Create(handles, nHandles);
 
     // assign h->ctxt to use a consistent queue context with CHIP-SPV
     h->ctxt = ctxt;
