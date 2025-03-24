@@ -26,9 +26,9 @@ configure_file(
     @ONLY)
 
 # Specify how to build the library.
-add_library(HipFFT SHARED
+add_library(hipfft SHARED
     hipfft.cpp)
-target_include_directories(HipFFT
+target_include_directories(hipfft
 	PUBLIC
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>"
         "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>"
@@ -39,11 +39,11 @@ if(PROJECT_IS_TOP_LEVEL)
     find_package(MKLShim REQUIRED)
     set(MKL_SHIM H4I::MKLShim)
 else()
-    add_dependencies(HipFFT MKLShim)
+    add_dependencies(hipfft MKLShim)
     set(MKL_SHIM MKLShim)
 endif()
 
-target_link_libraries(HipFFT
+target_link_libraries(hipfft
 	PRIVATE
         HipFFTCommonConfig
         ${MKL_SHIM}
@@ -53,8 +53,8 @@ target_link_libraries(HipFFT
 
 # Specify how to install the library.
 include (GNUInstallDirs)
-install(TARGETS HipFFT
-		EXPORT HipFFT
+install(TARGETS hipfft
+		EXPORT hipfft
 )
 
 # install the primary headers
@@ -78,8 +78,8 @@ install(FILES
 
 # Only export if we're building as a standalone project
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR STANDALONE_BUILD)
-  install(EXPORT HipFFT
-	  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/HipFFT
+  install(EXPORT hipfft
+	  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/hipfft
 	  NAMESPACE H4I::
   )
 
@@ -88,12 +88,12 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR STANDALONE_BUILD)
   configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/../CMake/HipFFTConfig.cmake.in
 	  ${CMAKE_CURRENT_BINARY_DIR}/HipFFTConfig.cmake
 	  PATH_VARS CMAKE_INSTALL_INCLUDEDIR
-	  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/HipFFT
+	  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/hipfft
   )
 
   install(FILES
 	  ${CMAKE_CURRENT_BINARY_DIR}/HipFFTConfig.cmake
-	  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/HipFFT
+	  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/hipfft
   )
 endif()
 

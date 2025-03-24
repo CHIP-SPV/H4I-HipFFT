@@ -33,7 +33,7 @@
     } while(0)
 
 int main() {
-    std::cout << "======== H4I-HipFFT Basic Test ========" << std::endl;
+    std::cout << "======== H4I-hipfft Basic Test ========" << std::endl;
     
     // Test plan creation
     std::cout << "Testing hipFFT plan creation..." << std::endl;

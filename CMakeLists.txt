@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.21)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/CMake/HipFFTVersion.cmake)
 
-project(HipFFT
+project(hipfft
     VERSION ${HipFFT_VERSION}
     LANGUAGES CXX)
 

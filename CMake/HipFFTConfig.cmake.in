@@ -6,8 +6,8 @@
 include(CMakeFindDependencyMacro)
 find_dependency(MKLShim)
 
-include ( "${CMAKE_CURRENT_LIST_DIR}/HipFFT.cmake" )
+include ( "${CMAKE_CURRENT_LIST_DIR}/hipfft.cmake" )
 set_and_check(H4I_HipFFT_INCLUDE_DIR "@PACKAGE_CMAKE_INSTALL_INCLUDEDIR@")
-set(H4I_HipFFT_LIBRARIES H4I::HipFFT)
-check_required_components(HipFFT)
+set(H4I_HipFFT_LIBRARIES H4I::hipfft)
+check_required_components(hipfft)
 

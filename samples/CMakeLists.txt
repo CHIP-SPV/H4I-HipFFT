@@ -3,9 +3,9 @@ cmake_minimum_required(VERSION 3.15)
 # Add basic test
 add_executable(fft_basic_test fft_basic_test.cpp)
 if(TARGET deviceInternal) # deviceInternal is available when building in-tree
-    target_link_libraries(fft_basic_test PRIVATE deviceInternal HipFFT)
+    target_link_libraries(fft_basic_test PRIVATE deviceInternal hipfft)
 else()
-    target_link_libraries(fft_basic_test PRIVATE hip::device HipFFT)
+    target_link_libraries(fft_basic_test PRIVATE hip::device hipfft)
 endif()
 
 # Install the sample in bin directory
