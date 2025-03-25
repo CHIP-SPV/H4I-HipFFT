@@ -62,16 +62,15 @@ install(FILES
         ${CMAKE_BINARY_DIR}/include/hipfft/hipfft.h
         ${CMAKE_BINARY_DIR}/include/hipfft/hipfft-version.h
         ${CMAKE_CURRENT_SOURCE_DIR}/../include/hipfft/hipfft-export.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/../include/hipfft/hipfftt.h
         DESTINATION ${CMAKE_INSTALL_PREFIX}/include/hipfft
 )
 
 # install the redirection headers for backwards compatibility
 # with previous versions of hipfft
 install(FILES
-	${CMAKE_CURRENT_SOURCE_DIR}/../include/hipfft.h
-	${CMAKE_CURRENT_SOURCE_DIR}/../include/hipfft-version.h
-	${CMAKE_CURRENT_SOURCE_DIR}/../include/hipfft-export.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/../include/hipfft.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/../include/hipfft-version.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/../include/hipfft-export.h
         ${CMAKE_CURRENT_SOURCE_DIR}/../include/hipfftXt.h
         DESTINATION ${CMAKE_INSTALL_PREFIX}/include
 )
