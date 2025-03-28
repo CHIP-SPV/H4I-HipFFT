@@ -28,6 +28,8 @@ configure_file(
 # Specify how to build the library.
 add_library(hipfft SHARED
     hipfft.cpp)
+# Add explicit dependency on ROCmHipfft to ensure the headers are available
+add_dependencies(hipfft ROCmHipfft)
 target_include_directories(hipfft
 	PUBLIC
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>"
@@ -46,6 +48,8 @@ endif()
 target_link_libraries(hipfft
 	PRIVATE
         HipFFTCommonConfig
+    PUBLIC
+        hip::host
         ${MKL_SHIM}
     )
 
