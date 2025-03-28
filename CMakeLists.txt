@@ -1,15 +1,30 @@
 # Copyright 2021-2023 UT-Battelle
 # See LICENSE.txt in the root of the source distribution for license info.
-cmake_minimum_required(VERSION 3.23)
-include (${CMAKE_SOURCE_DIR}/CMake/HipFFTVersion.cmake)
-project(HipFFT
+cmake_minimum_required(VERSION 3.21)
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/CMake/HipFFTVersion.cmake)
+
+project(hipfft
     VERSION ${HipFFT_VERSION}
     LANGUAGES CXX)
 
 
 # We will use HIP in some fashion, no matter which platform
 # we're targeting or what parts of the software we're building.
-find_package(HIP REQUIRED)
+if(POLICY CMP0077)
+  cmake_policy(SET CMP0077 NEW)
+endif()
+set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    set(STANDALONE_BUILD ON)
+else()
+    set(STANDALONE_BUILD OFF)
+endif()
+
+if(STANDALONE_BUILD)
+  find_package(hip CONFIG REQUIRED)
+endif()
+
 # When using CHIP-SPV, CMake's method for finding a HIP compiler
 # seems to want to find ROCm.  Since ROCm isn't in play, CMake
 # fails to enable support for HIP as a first class language.
@@ -46,6 +61,9 @@ add_subdirectory(src)
 # Build tests if desired.
 #include(CTest)
 #if(BUILD_TESTING)
-#    add_subdirectory(tests)
 #endif()
+
+#add_subdirectory(tests)
+# Always build samples
+add_subdirectory(samples)
 
