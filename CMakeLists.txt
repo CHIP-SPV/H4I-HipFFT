@@ -15,9 +15,16 @@ if(POLICY CMP0077)
   cmake_policy(SET CMP0077 NEW)
 endif()
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
-if(STANDALONE_BUILD AND NOT TARGET hip::host)
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    set(STANDALONE_BUILD ON)
+else()
+    set(STANDALONE_BUILD OFF)
+endif()
+
+if(STANDALONE_BUILD)
   find_package(hip CONFIG REQUIRED)
 endif()
+
 # When using CHIP-SPV, CMake's method for finding a HIP compiler
 # seems to want to find ROCm.  Since ROCm isn't in play, CMake
 # fails to enable support for HIP as a first class language.
@@ -54,9 +61,9 @@ add_subdirectory(src)
 # Build tests if desired.
 #include(CTest)
 #if(BUILD_TESTING)
-#    add_subdirectory(tests)
 #endif()
 
+#add_subdirectory(tests)
 # Always build samples
 add_subdirectory(samples)
 

@@ -47,8 +47,6 @@ target_link_libraries(hipfft
 	PRIVATE
         HipFFTCommonConfig
         ${MKL_SHIM}
-    PUBLIC
-		hip::host
     )
 
 # Specify how to install the library.
