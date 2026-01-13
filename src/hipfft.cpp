@@ -31,7 +31,7 @@ hipfftResult hipfftCreate(hipfftHandle *plan)
     }
     handles[nHandles-1] = 0;
     nHandles--;
-    auto *ctxt = H4I::MKLShim::Create(handles.data(), nHandles, backendName);
+    auto *ctxt = H4I::MKLShim::Create(handles.data(), nHandles);
 
     // assign h->ctxt to use a consistent queue context with CHIP-SPV
     h->ctxt = ctxt;

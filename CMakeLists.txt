@@ -25,6 +25,7 @@
 
 cmake_minimum_required(VERSION 3.20)
 
+include(GNUInstallDirs)
 # Check if INTEL_COMPILER_PATH was passed to CMake invocation, if not, look for icpx in PATH
 if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
     find_program(INTEL_COMPILER_PATH icpx)
@@ -67,15 +68,12 @@ add_compile_definitions(__HIP_PLATFORM_SPIRV__)
 
 # Find HIP
 if(STANDALONE_BUILD)
-  # Build H4I-MKLShim from submodule first
-  add_subdirectory(H4I-MKLShim REQUIRED)
+  # Find externally installed H4I-MKLShim
+  find_package(MKLShim CONFIG REQUIRED)
+  include_directories(${H4I_MKLShim_INCLUDE_DIR})
   
-  # Find hip package, but exclude its H4I-MKLShim
-  set(CMAKE_IGNORE_PATH ${CMAKE_IGNORE_PATH} ${hip_DIR}/../H4I-MKLShim)
   find_package(hip CONFIG REQUIRED)
-  
-  # Explicitly set the path to our built H4I-MKLShim
-  set(H4I_MKLShim_DIR ${CMAKE_CURRENT_BINARY_DIR}/H4I-MKLShim)
+  include_directories($ENV{HIP_PATH}/include)
 endif()
 
 
@@ -87,8 +85,8 @@ add_library(hipfft SHARED
 # Link against MKL and other required libraries
 target_link_libraries(hipfft
     PUBLIC
-        CHIP
-        MKLShim
+        hip::host
+        H4I::MKLShim
     PRIVATE
         MKL::MKL
 )
