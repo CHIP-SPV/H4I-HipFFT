@@ -23,14 +23,7 @@ hipfftResult hipfftCreate(hipfftHandle *plan)
     // Replace VLA with std::vector
     std::vector<unsigned long> handles(nHandles);
     hipGetBackendNativeHandles((uintptr_t)NULL, handles.data(), 0);
-    char* backendName = (char*)handles[0];
-    // New implementation of hipGetBackendNativeHandles keep backend name in the Native handles
-    // Removing backend name from the list to make it sync to older native handle. This will help Shim layer remains unchanged
-    for(auto i=1; i<nHandles; ++i) {
-        handles[i-1] = handles[i];
-    }
-    handles[nHandles-1] = 0;
-    nHandles--;
+    // MKLShim::Create expects handles[0] = backendName, handles[1..n-1] = native handles
     auto *ctxt = H4I::MKLShim::Create(handles.data(), nHandles);
 
     // assign h->ctxt to use a consistent queue context with CHIP-SPV
