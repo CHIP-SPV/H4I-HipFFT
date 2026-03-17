@@ -1,2 +1,3 @@
+add_subdirectory(hipfft_create)
 add_subdirectory(hipfft_real_1d)
 add_subdirectory(hipfft_complex_1d)
