@@ -36,8 +36,36 @@ jobs:
           module load oneapi/2025.0.4 llvm/22.0-native HIP/chipStar/main level-zero/dgpu HIP/H4I-MKLShim/oneapi-2025.0.4
           module list
           rm -rf build
+          INSTALL_PREFIX="$PWD/build/install"
           cmake -S . -B build \
             -DCMAKE_CXX_COMPILER="$(which hipcc)" \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX" \
             -DCMAKE_POLICY_VERSION_MINIMUM=3.5
           cmake --build build -j 8
+          cmake --install build
+      - name: Consumer find_package test
+        shell: bash
+        run: |
+          set -e
+          if [ -f "$HOME/.local/init/bash" ]; then
+            export MODULESHOME=$HOME/.local
+            source "$MODULESHOME/init/bash"
+          elif [ -f /etc/profile.d/lmod.sh ]; then
+            source /etc/profile.d/lmod.sh
+          else
+            source /etc/profile.d/modules.sh
+          fi
+          module use /space/pvelesko/modulefiles
+          module load oneapi/2025.0.4 llvm/22.0-native HIP/chipStar/main level-zero/dgpu HIP/H4I-MKLShim/oneapi-2025.0.4
+          INSTALL_PREFIX="$PWD/build/install"
+          rm -rf tests/cmake-consumer/build
+          cmake -S tests/cmake-consumer -B tests/cmake-consumer/build \
+            -DCMAKE_CXX_COMPILER="$(which hipcc)" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="$INSTALL_PREFIX" \
+            -Dhipfft_DIR="$INSTALL_PREFIX/lib/cmake/hipfft" \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+          cmake --build tests/cmake-consumer/build -j 8
+          test -x tests/cmake-consumer/build/consumer
+          echo "Consumer binary built successfully: $(file tests/cmake-consumer/build/consumer)"
