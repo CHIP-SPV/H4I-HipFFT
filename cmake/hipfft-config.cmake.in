@@ -1,0 +1,9 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+find_dependency(hip CONFIG)
+find_dependency(MKLShim CONFIG)
+
+include("${CMAKE_CURRENT_LIST_DIR}/hipfftTargets.cmake")
+
+check_required_components(hipfft)
