@@ -102,10 +102,14 @@ target_compile_options(hipfft PRIVATE -fsycl)
 target_link_options(hipfft PRIVATE -fsycl)
 
 # Add the directory containing hipfftHandle.h to the include directories
-target_include_directories(hipfft PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(hipfft PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
 
 # Installation rules
 install(TARGETS hipfft
+    EXPORT hipfftTargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -114,6 +118,36 @@ install(TARGETS hipfft
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     FILES_MATCHING PATTERN "*.h"
+)
+
+# Export CMake package config so consumers can do find_package(hipfft CONFIG)
+# and link against hip::hipfft.
+include(CMakePackageConfigHelpers)
+
+set(HIPFFT_CMAKE_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/hipfft)
+
+install(EXPORT hipfftTargets
+    FILE hipfftTargets.cmake
+    NAMESPACE hip::
+    DESTINATION ${HIPFFT_CMAKE_INSTALL_DIR}
+)
+
+configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/hipfft-config.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/hipfft-config.cmake
+    INSTALL_DESTINATION ${HIPFFT_CMAKE_INSTALL_DIR}
+)
+
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/hipfft-config-version.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/hipfft-config.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/hipfft-config-version.cmake
+    DESTINATION ${HIPFFT_CMAKE_INSTALL_DIR}
 )
 
 include(CTest)
