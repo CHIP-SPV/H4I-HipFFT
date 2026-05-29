@@ -79,6 +79,15 @@ jobs:
             export LIBRARY_PATH="$MKLSHIM_PREFIX/lib:${LIBRARY_PATH:-}"
             export CMAKE_PREFIX_PATH="$MKLSHIM_PREFIX:${CMAKE_PREFIX_PATH:-}"
             export LD_LIBRARY_PATH="$MKLSHIM_PREFIX/lib:${LD_LIBRARY_PATH:-}"
+            # chipStar's install bundles a copy of MKLShim (its dependency),
+            # and hipcc's include path puts that bundle ahead of CPATH. Stamp
+            # the paired install over chipStar's bundled MKLShim so the new
+            # headers/library win for this build. install_chipstar.py refreshes
+            # the bundle on next chipStar reinstall.
+            CHIP_INC="/home/pvelesko/install/HIP/chipStar/main/include/h4i"
+            CHIP_LIB="/home/pvelesko/install/HIP/chipStar/main/lib/libMKLShim.so"
+            [ -d "$CHIP_INC" ] && rsync -a "$MKLSHIM_PREFIX/include/h4i/" "$CHIP_INC/"
+            [ -f "$CHIP_LIB" ] && cp -a "$MKLSHIM_PREFIX/lib/libMKLShim.so" "$CHIP_LIB"
           fi
 
           rm -rf build
