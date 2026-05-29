@@ -71,6 +71,12 @@ jobs:
               -DCMAKE_INSTALL_PREFIX="$MKLSHIM_PREFIX" \
               -DCMAKE_POLICY_VERSION_MINIMUM=3.5
             cmake --build /tmp/h4i-mklshim-paired/build -j 8 --target install
+            # The HIP/H4I-MKLShim module prepends its include/lib paths to
+            # CPATH/LIBRARY_PATH/LD_LIBRARY_PATH/CMAKE_PREFIX_PATH; put the
+            # paired install ahead of all of those so the freshly built
+            # headers and libraries win.
+            export CPATH="$MKLSHIM_PREFIX/include:${CPATH:-}"
+            export LIBRARY_PATH="$MKLSHIM_PREFIX/lib:${LIBRARY_PATH:-}"
             export CMAKE_PREFIX_PATH="$MKLSHIM_PREFIX:${CMAKE_PREFIX_PATH:-}"
             export LD_LIBRARY_PATH="$MKLSHIM_PREFIX/lib:${LD_LIBRARY_PATH:-}"
           fi
