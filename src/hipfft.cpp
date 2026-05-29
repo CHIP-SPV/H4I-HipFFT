@@ -6,6 +6,7 @@
 #include <vector>
 #include "hipfftHandle.h"
 #include "hipfft.h"
+#include "hipfft-version.h"
 #include "hip/hip_runtime.h"
 #include "hip/hip_interop.h"
 #include "h4i/mklshim/mklshim.h"
@@ -263,3 +264,105 @@ hipfftResult hipfftExecC2C(hipfftHandle plan,
 
     return result;
 };
+
+
+hipfftResult hipfftPlan3d(hipfftHandle *plan, int nx, int ny, int nz, hipfftType type)
+{
+    if (nx <= 0 || ny <= 0 || nz <= 0) {
+        *plan = nullptr;
+        return HIPFFT_INVALID_VALUE;
+    }
+    hipfftHandle h = nullptr;
+    hipfftResult result = hipfftCreate(&h);
+    if (result != HIPFFT_SUCCESS) return result;
+    result = hipfftMakePlan3d(h, nx, ny, nz, type, nullptr);
+    *plan = h;
+    return result;
+}
+
+
+hipfftResult hipfftMakePlan3d(hipfftHandle plan, int nx, int ny, int nz, hipfftType type, size_t *workSize)
+{
+    std::vector<std::int64_t> dimensions {(int64_t)nx, (int64_t)ny, (int64_t)nz};
+    switch (type) {
+        case HIPFFT_R2C:
+        case HIPFFT_C2R:
+            plan->descSR = H4I::MKLShim::createFFTDescriptorSR(plan->ctxt, dimensions);
+            break;
+        case HIPFFT_D2Z:
+        case HIPFFT_Z2D:
+            plan->descDR = H4I::MKLShim::createFFTDescriptorDR(plan->ctxt, dimensions);
+            break;
+        case HIPFFT_C2C:
+            plan->descSC = H4I::MKLShim::createFFTDescriptorSC(plan->ctxt, dimensions);
+            break;
+        case HIPFFT_Z2Z:
+            plan->descDC = H4I::MKLShim::createFFTDescriptorDC(plan->ctxt, dimensions);
+            break;
+        default:
+            return HIPFFT_INVALID_PLAN;
+    }
+    return HIPFFT_SUCCESS;
+}
+
+
+hipfftResult hipfftExecZ2Z(hipfftHandle plan, hipfftDoubleComplex *idata, hipfftDoubleComplex *odata, int direction)
+{
+    switch (direction) {
+        case HIPFFT_FORWARD:
+            H4I::MKLShim::fftExecZ2Zforward(plan->ctxt, plan->descDC,
+                (double _Complex *)idata, (double _Complex *)odata);
+            return HIPFFT_SUCCESS;
+        case HIPFFT_BACKWARD:
+            H4I::MKLShim::fftExecZ2Zbackward(plan->ctxt, plan->descDC,
+                (double _Complex *)idata, (double _Complex *)odata);
+            return HIPFFT_SUCCESS;
+        default:
+            return HIPFFT_INVALID_VALUE;
+    }
+}
+
+
+hipfftResult hipfftExecD2Z(hipfftHandle plan, hipfftDoubleReal *idata, hipfftDoubleComplex *odata)
+{
+    H4I::MKLShim::fftExecD2Z(plan->ctxt, plan->descDR, idata, (double _Complex *)odata);
+    return HIPFFT_SUCCESS;
+}
+
+
+hipfftResult hipfftExecZ2D(hipfftHandle plan, hipfftDoubleComplex *idata, hipfftDoubleReal *odata)
+{
+    H4I::MKLShim::fftExecZ2D(plan->ctxt, plan->descDR, (double _Complex *)idata, odata);
+    return HIPFFT_SUCCESS;
+}
+
+
+hipfftResult hipfftDestroy(hipfftHandle plan)
+{
+    if (plan == nullptr) return HIPFFT_INVALID_PLAN;
+    if (plan->descSR != nullptr) H4I::MKLShim::destroyFFTDescriptorSR(plan->ctxt, plan->descSR);
+    if (plan->descSC != nullptr) H4I::MKLShim::destroyFFTDescriptorSC(plan->ctxt, plan->descSC);
+    if (plan->descDR != nullptr) H4I::MKLShim::destroyFFTDescriptorDR(plan->ctxt, plan->descDR);
+    if (plan->descDC != nullptr) H4I::MKLShim::destroyFFTDescriptorDC(plan->ctxt, plan->descDC);
+    delete plan;
+    return HIPFFT_SUCCESS;
+}
+
+
+// chipStar dispatches kernels on its own queue; the MKLShim context already
+// holds the SYCL queue used for the FFT.  hipFFT consumers (e.g. OpenMM) call
+// hipfftSetStream to associate a hipStream_t with the plan — accept it as a
+// no-op so existing code paths link and run; once MKLShim exposes a
+// stream-binding API this can be wired through.
+hipfftResult hipfftSetStream(hipfftHandle /*plan*/, hipStream_t /*stream*/)
+{
+    return HIPFFT_SUCCESS;
+}
+
+
+hipfftResult hipfftGetVersion(int *version)
+{
+    if (version == nullptr) return HIPFFT_INVALID_VALUE;
+    *version = hipfftVersionMajor * 10000 + hipfftVersionMinor * 100 + hipfftVersionPatch;
+    return HIPFFT_SUCCESS;
+}
