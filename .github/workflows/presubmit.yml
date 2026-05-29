@@ -79,15 +79,23 @@ jobs:
             export LIBRARY_PATH="$MKLSHIM_PREFIX/lib:${LIBRARY_PATH:-}"
             export CMAKE_PREFIX_PATH="$MKLSHIM_PREFIX:${CMAKE_PREFIX_PATH:-}"
             export LD_LIBRARY_PATH="$MKLSHIM_PREFIX/lib:${LD_LIBRARY_PATH:-}"
-            # chipStar's install bundles a copy of MKLShim (its dependency),
-            # and hipcc's include path puts that bundle ahead of CPATH. Stamp
-            # the paired install over chipStar's bundled MKLShim so the new
-            # headers/library win for this build. install_chipstar.py refreshes
-            # the bundle on next chipStar reinstall.
-            CHIP_INC="/home/pvelesko/install/HIP/chipStar/main/include/h4i"
-            CHIP_LIB="/home/pvelesko/install/HIP/chipStar/main/lib/libMKLShim.so"
-            [ -d "$CHIP_INC" ] && rsync -a "$MKLSHIM_PREFIX/include/h4i/" "$CHIP_INC/"
-            [ -f "$CHIP_LIB" ] && cp -a "$MKLSHIM_PREFIX/lib/libMKLShim.so" "$CHIP_LIB"
+            # chipStar's install bundles a copy of MKLShim (its dependency)
+            # and the HIP/H4I-MKLShim module loads its own pre-installed one,
+            # both of which sit ahead of CPATH/LIBRARY_PATH via module env.
+            # Stamp the paired install over BOTH so headers and links resolve
+            # to the new symbols. install_chipstar.py refreshes the bundles
+            # on next reinstall.
+            for STAMP_PREFIX in \
+              "/home/pvelesko/install/HIP/chipStar/main" \
+              "/home/pvelesko/install/HIP/H4I-MKLShim/oneapi-2025.0.4"
+            do
+              if [ -d "$STAMP_PREFIX/include/h4i" ]; then
+                rsync -a "$MKLSHIM_PREFIX/include/h4i/" "$STAMP_PREFIX/include/h4i/"
+              fi
+              if [ -f "$STAMP_PREFIX/lib/libMKLShim.so" ]; then
+                cp -a "$MKLSHIM_PREFIX/lib/libMKLShim.so" "$STAMP_PREFIX/lib/libMKLShim.so"
+              fi
+            done
           fi
 
           rm -rf build
