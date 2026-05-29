@@ -7,6 +7,7 @@
 #include "hipfftHandle.h"
 #include "hipfft.h"
 #include "hipfft-version.h"
+#include "h4i/mklshim/Stream.h"
 #include "hip/hip_runtime.h"
 #include "hip/hip_interop.h"
 #include "h4i/mklshim/mklshim.h"
@@ -349,13 +350,31 @@ hipfftResult hipfftDestroy(hipfftHandle plan)
 }
 
 
-// chipStar dispatches kernels on its own queue; the MKLShim context already
-// holds the SYCL queue used for the FFT.  hipFFT consumers (e.g. OpenMM) call
-// hipfftSetStream to associate a hipStream_t with the plan — accept it as a
-// no-op so existing code paths link and run; once MKLShim exposes a
-// stream-binding API this can be wired through.
-hipfftResult hipfftSetStream(hipfftHandle /*plan*/, hipStream_t /*stream*/)
+// Bind the plan to the SYCL queue underlying the given hipStream_t so that
+// FFT submissions land on the same chipStar L0 command list as the
+// surrounding HIP kernels.  Without this the plan executes on whatever
+// queue was current at hipfftCreate time (typically the default stream),
+// which races against kernels on a non-default pmeStream and produces
+// stale FFT input/output for consumers like OpenMM PME.
+hipfftResult hipfftSetStream(hipfftHandle plan, hipStream_t stream)
 {
+    if (plan == nullptr) return HIPFFT_INVALID_PLAN;
+    int nHandles = 0;
+    hipGetBackendNativeHandles((uintptr_t)stream, 0, &nHandles);
+    if (nHandles <= 0) return HIPFFT_INVALID_VALUE;
+    std::vector<unsigned long> handles(nHandles);
+    hipGetBackendNativeHandles((uintptr_t)stream, handles.data(), 0);
+    // MKLShim::SetStream discards Update's return; call Update directly so
+    // we capture the (possibly different) context pointer if the table
+    // already has a matching queue.
+    plan->ctxt = H4I::MKLShim::Update(plan->ctxt, handles.data(), nHandles);
+    if (plan->ctxt == nullptr) return HIPFFT_INVALID_VALUE;
+    // The FFT plan was committed on the previous queue at create time; rebind
+    // each descriptor so future compute_* submissions land on the new queue.
+    if (plan->descSR != nullptr) H4I::MKLShim::rebindFFTDescriptorSR(plan->ctxt, plan->descSR);
+    if (plan->descSC != nullptr) H4I::MKLShim::rebindFFTDescriptorSC(plan->ctxt, plan->descSC);
+    if (plan->descDR != nullptr) H4I::MKLShim::rebindFFTDescriptorDR(plan->ctxt, plan->descDR);
+    if (plan->descDC != nullptr) H4I::MKLShim::rebindFFTDescriptorDC(plan->ctxt, plan->descDC);
     return HIPFFT_SUCCESS;
 }
 
