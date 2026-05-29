@@ -35,6 +35,31 @@ jobs:
           module use /space/pvelesko/modulefiles
           module load oneapi/2025.0.4 llvm/22.0-native HIP/chipStar/main level-zero/dgpu HIP/H4I-MKLShim/oneapi-2025.0.4
           module list
+
+          # If a paired branch exists on H4I-MKLShim, build it from source so
+          # this PR can be tested against in-flight MKLShim changes it depends
+          # on (e.g. new symbols like rebindFFTDescriptor*).  Falls back to the
+          # module-provided MKLShim install when no paired branch exists.
+          MKLSHIM_PREFIX=""
+          BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME:-}}"
+          if [ -n "$BRANCH" ]; then
+            if git ls-remote --exit-code --heads https://github.com/CHIP-SPV/H4I-MKLShim "$BRANCH" >/dev/null 2>&1; then
+              echo "Using H4I-MKLShim branch '$BRANCH' for paired build"
+              rm -rf /tmp/h4i-mklshim-paired
+              git clone --depth 1 --branch "$BRANCH" https://github.com/CHIP-SPV/H4I-MKLShim /tmp/h4i-mklshim-paired
+              MKLSHIM_PREFIX="$PWD/build/mklshim"
+              cmake -S /tmp/h4i-mklshim-paired -B /tmp/h4i-mklshim-paired/build \
+                -DCMAKE_CXX_COMPILER="$(which icpx)" \
+                -DINTEL_COMPILER_PATH="$(which icpx)" \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_INSTALL_PREFIX="$MKLSHIM_PREFIX" \
+                -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+              cmake --build /tmp/h4i-mklshim-paired/build -j 8 --target install
+              export CMAKE_PREFIX_PATH="$MKLSHIM_PREFIX:${CMAKE_PREFIX_PATH:-}"
+              export LD_LIBRARY_PATH="$MKLSHIM_PREFIX/lib:${LD_LIBRARY_PATH:-}"
+            fi
+          fi
+
           rm -rf build
           INSTALL_PREFIX="$PWD/build/install"
           cmake -S . -B build \
