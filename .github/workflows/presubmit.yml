@@ -22,8 +22,6 @@ jobs:
           fetch-depth: 1
       - name: Build
         shell: bash
-        env:
-          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
           set -e
           if [ -f "$HOME/.local/init/bash" ]; then
@@ -38,66 +36,6 @@ jobs:
           module load oneapi/2025.0.4 llvm/22.0-native HIP/chipStar/main level-zero/dgpu HIP/H4I-MKLShim/oneapi-2025.0.4
           module list
 
-          # Optionally build a paired H4I-MKLShim branch from source so this PR
-          # can be tested against in-flight MKLShim changes it depends on
-          # (e.g. new symbols like rebindFFTDescriptor*). Resolution order:
-          #   1. MKLSHIM_BRANCH env var, if set
-          #   2. "mklshim-branch: <name>" line in the PR body
-          #   3. A same-named branch on H4I-MKLShim
-          # Falls back to the HIP/H4I-MKLShim/oneapi-2025.0.4 module install
-          # when no paired branch is found.
-          MKLSHIM_PREFIX=""
-          MKLSHIM_REF=""
-          if [ -n "${MKLSHIM_BRANCH:-}" ]; then
-            MKLSHIM_REF="$MKLSHIM_BRANCH"
-          elif [ -n "${PR_BODY:-}" ]; then
-            MKLSHIM_REF="$(printf '%s\n' "$PR_BODY" | grep -oE 'mklshim-branch:[[:space:]]*[A-Za-z0-9._/-]+' | head -1 | awk -F: '{print $2}' | tr -d ' ')"
-          fi
-          if [ -z "$MKLSHIM_REF" ]; then
-            BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME:-}}"
-            if [ -n "$BRANCH" ] && git ls-remote --exit-code --heads https://github.com/CHIP-SPV/H4I-MKLShim "$BRANCH" >/dev/null 2>&1; then
-              MKLSHIM_REF="$BRANCH"
-            fi
-          fi
-          if [ -n "$MKLSHIM_REF" ]; then
-            echo "Using H4I-MKLShim branch '$MKLSHIM_REF' for paired build"
-            rm -rf /tmp/h4i-mklshim-paired
-            git clone --depth 1 --branch "$MKLSHIM_REF" https://github.com/CHIP-SPV/H4I-MKLShim /tmp/h4i-mklshim-paired
-            MKLSHIM_PREFIX="$PWD/build/mklshim"
-            cmake -S /tmp/h4i-mklshim-paired -B /tmp/h4i-mklshim-paired/build \
-              -DCMAKE_CXX_COMPILER="$(which icpx)" \
-              -DINTEL_COMPILER_PATH="$(which icpx)" \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_INSTALL_PREFIX="$MKLSHIM_PREFIX" \
-              -DCMAKE_POLICY_VERSION_MINIMUM=3.5
-            cmake --build /tmp/h4i-mklshim-paired/build -j 8 --target install
-            # The HIP/H4I-MKLShim module prepends its include/lib paths to
-            # CPATH/LIBRARY_PATH/LD_LIBRARY_PATH/CMAKE_PREFIX_PATH; put the
-            # paired install ahead of all of those so the freshly built
-            # headers and libraries win.
-            export CPATH="$MKLSHIM_PREFIX/include:${CPATH:-}"
-            export LIBRARY_PATH="$MKLSHIM_PREFIX/lib:${LIBRARY_PATH:-}"
-            export CMAKE_PREFIX_PATH="$MKLSHIM_PREFIX:${CMAKE_PREFIX_PATH:-}"
-            export LD_LIBRARY_PATH="$MKLSHIM_PREFIX/lib:${LD_LIBRARY_PATH:-}"
-            # chipStar's install bundles a copy of MKLShim (its dependency)
-            # and the HIP/H4I-MKLShim module loads its own pre-installed one,
-            # both of which sit ahead of CPATH/LIBRARY_PATH via module env.
-            # Stamp the paired install over BOTH so headers and links resolve
-            # to the new symbols. install_chipstar.py refreshes the bundles
-            # on next reinstall.
-            for STAMP_PREFIX in \
-              "/home/pvelesko/install/HIP/chipStar/main" \
-              "/home/pvelesko/install/HIP/H4I-MKLShim/oneapi-2025.0.4"
-            do
-              if [ -d "$STAMP_PREFIX/include/h4i" ]; then
-                rsync -a "$MKLSHIM_PREFIX/include/h4i/" "$STAMP_PREFIX/include/h4i/"
-              fi
-              if [ -f "$STAMP_PREFIX/lib/libMKLShim.so" ]; then
-                cp -a "$MKLSHIM_PREFIX/lib/libMKLShim.so" "$STAMP_PREFIX/lib/libMKLShim.so"
-              fi
-            done
-          fi
-
           rm -rf build
           INSTALL_PREFIX="$PWD/build/install"
           cmake -S . -B build \
@@ -107,6 +45,25 @@ jobs:
             -DCMAKE_POLICY_VERSION_MINIMUM=3.5
           cmake --build build -j 8
           cmake --install build
+      - name: Test
+        shell: bash
+        run: |
+          set -e
+          if [ -f "$HOME/.local/init/bash" ]; then
+            export MODULESHOME=$HOME/.local
+            source "$MODULESHOME/init/bash"
+          elif [ -f /etc/profile.d/lmod.sh ]; then
+            source /etc/profile.d/lmod.sh
+          else
+            source /etc/profile.d/modules.sh
+          fi
+          module use /space/pvelesko/modulefiles
+          module load oneapi/2025.0.4 llvm/22.0-native HIP/chipStar/main level-zero/dgpu HIP/H4I-MKLShim/oneapi-2025.0.4
+          # D2Z/Z2D tests exercise double precision; the Arc A380 needs FP64
+          # emulation enabled to run them.
+          export IGC_EnableDPEmulation=1
+          export OverrideDefaultFP64Settings=1
+          ctest --test-dir build --output-on-failure
       - name: Consumer find_package test
         shell: bash
         run: |
