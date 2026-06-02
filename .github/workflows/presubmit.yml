@@ -45,6 +45,25 @@ jobs:
             -DCMAKE_POLICY_VERSION_MINIMUM=3.5
           cmake --build build -j 8
           cmake --install build
+      - name: Test
+        shell: bash
+        run: |
+          set -e
+          if [ -f "$HOME/.local/init/bash" ]; then
+            export MODULESHOME=$HOME/.local
+            source "$MODULESHOME/init/bash"
+          elif [ -f /etc/profile.d/lmod.sh ]; then
+            source /etc/profile.d/lmod.sh
+          else
+            source /etc/profile.d/modules.sh
+          fi
+          module use /space/pvelesko/modulefiles
+          module load oneapi/2025.0.4 llvm/22.0-native HIP/chipStar/main level-zero/dgpu HIP/H4I-MKLShim/oneapi-2025.0.4
+          # D2Z/Z2D tests exercise double precision; the Arc A380 needs FP64
+          # emulation enabled to run them.
+          export IGC_EnableDPEmulation=1
+          export OverrideDefaultFP64Settings=1
+          ctest --test-dir build --output-on-failure
       - name: Consumer find_package test
         shell: bash
         run: |
