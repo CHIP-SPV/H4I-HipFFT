@@ -63,6 +63,7 @@ jobs:
             -DCMAKE_CXX_COMPILER="$(which icpx)" \
             -DINTEL_COMPILER_PATH="$(which icpx)" \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="$DEPS/chipstar" \
             -DCMAKE_INSTALL_PREFIX="$DEPS/mklshim" \
             -DCMAKE_POLICY_VERSION_MINIMUM=3.5
           cmake --build "$SRC/H4I-MKLShim/build" -j 8 --target install
