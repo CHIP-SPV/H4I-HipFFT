@@ -345,6 +345,13 @@ hipfftResult hipfftDestroy(hipfftHandle plan)
     if (plan->descSC != nullptr) H4I::MKLShim::destroyFFTDescriptorSC(plan->ctxt, plan->descSC);
     if (plan->descDR != nullptr) H4I::MKLShim::destroyFFTDescriptorDR(plan->ctxt, plan->descDR);
     if (plan->descDC != nullptr) H4I::MKLShim::destroyFFTDescriptorDC(plan->ctxt, plan->descDC);
+    // Release the per-queue MKLShim Context held since hipfftCreate.
+    // Without this the Context stays in MKLShim::context_tbl keyed by
+    // the underlying L0 queue handle pointer; when chipStar later
+    // recycles that handle for a freshly created hipStream_t, the
+    // next hipfftCreate returns the stale Context and oneMKL commits
+    // against a SYCL queue whose backing L0 queue was destroyed.
+    if (plan->ctxt != nullptr) H4I::MKLShim::Destroy(plan->ctxt);
     delete plan;
     return HIPFFT_SUCCESS;
 }
