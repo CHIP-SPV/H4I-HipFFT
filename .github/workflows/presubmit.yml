@@ -20,6 +20,55 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 1
+      - name: Build chipStar + H4I-MKLShim from source
+        shell: bash
+        run: |
+          set -e
+          if [ -f "$HOME/.local/init/bash" ]; then
+            export MODULESHOME=$HOME/.local
+            source "$MODULESHOME/init/bash"
+          elif [ -f /etc/profile.d/lmod.sh ]; then
+            source /etc/profile.d/lmod.sh
+          else
+            source /etc/profile.d/modules.sh
+          fi
+          module use /space/pvelesko/modulefiles
+          module load oneapi/2025.0.4 llvm/22.0-native level-zero/dgpu
+          module list
+
+          # Build chipStar and H4I-MKLShim from source into a job-local prefix
+          # instead of relying on the system module installs. Everything is
+          # built, installed, and consumed within this job, so the install is
+          # self-consistent (no external staging paths to go stale).
+          DEPS="$PWD/deps"
+          SRC="$RUNNER_TEMP/dep-src"
+          rm -rf "$DEPS" "$SRC"
+          mkdir -p "$SRC"
+
+          # chipStar: library only (no tests, no samples) -- builds fast.
+          git clone --depth 1 --recurse-submodules --shallow-submodules \
+            https://github.com/CHIP-SPV/chipStar "$SRC/chipStar"
+          cmake -S "$SRC/chipStar" -B "$SRC/chipStar/build" -G Ninja \
+            -DLLVM_CONFIG_BIN="$(which llvm-config)" \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCHIP_BUILD_TESTS=OFF \
+            -DCHIP_BUILD_SAMPLES=OFF \
+            -DCMAKE_INSTALL_PREFIX="$DEPS/chipstar"
+          ninja -C "$SRC/chipStar/build"
+          cmake --install "$SRC/chipStar/build"
+
+          # H4I-MKLShim: built with icpx.
+          git clone --depth 1 https://github.com/CHIP-SPV/H4I-MKLShim "$SRC/H4I-MKLShim"
+          cmake -S "$SRC/H4I-MKLShim" -B "$SRC/H4I-MKLShim/build" \
+            -DCMAKE_CXX_COMPILER="$(which icpx)" \
+            -DINTEL_COMPILER_PATH="$(which icpx)" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="$DEPS/chipstar" \
+            -DCMAKE_INSTALL_PREFIX="$DEPS/mklshim" \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+          cmake --build "$SRC/H4I-MKLShim/build" -j 8 --target install
+
+          echo "DEPS=$DEPS" >> "$GITHUB_ENV"
       - name: Build
         shell: bash
         run: |
@@ -33,13 +82,14 @@ jobs:
             source /etc/profile.d/modules.sh
           fi
           module use /space/pvelesko/modulefiles
-          module load oneapi/2025.0.4 llvm/22.0-native HIP/chipStar/main level-zero/dgpu HIP/H4I-MKLShim/oneapi-2025.0.4
-          module list
+          module load oneapi/2025.0.4 llvm/22.0-native level-zero/dgpu
+          export CMAKE_PREFIX_PATH="$DEPS/chipstar:$DEPS/mklshim:${CMAKE_PREFIX_PATH:-}"
+          export LD_LIBRARY_PATH="$DEPS/chipstar/lib:$DEPS/mklshim/lib:${LD_LIBRARY_PATH:-}"
 
           rm -rf build
           INSTALL_PREFIX="$PWD/build/install"
           cmake -S . -B build \
-            -DCMAKE_CXX_COMPILER="$(which hipcc)" \
+            -DCMAKE_CXX_COMPILER="$DEPS/chipstar/bin/hipcc" \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX" \
             -DCMAKE_POLICY_VERSION_MINIMUM=3.5
@@ -58,7 +108,9 @@ jobs:
             source /etc/profile.d/modules.sh
           fi
           module use /space/pvelesko/modulefiles
-          module load oneapi/2025.0.4 llvm/22.0-native HIP/chipStar/main level-zero/dgpu HIP/H4I-MKLShim/oneapi-2025.0.4
+          module load oneapi/2025.0.4 llvm/22.0-native level-zero/dgpu
+          export CMAKE_PREFIX_PATH="$DEPS/chipstar:$DEPS/mklshim:${CMAKE_PREFIX_PATH:-}"
+          export LD_LIBRARY_PATH="$DEPS/chipstar/lib:$DEPS/mklshim/lib:${LD_LIBRARY_PATH:-}"
           # D2Z/Z2D tests exercise double precision; the Arc A380 needs FP64
           # emulation enabled to run them.
           export IGC_EnableDPEmulation=1
@@ -77,13 +129,15 @@ jobs:
             source /etc/profile.d/modules.sh
           fi
           module use /space/pvelesko/modulefiles
-          module load oneapi/2025.0.4 llvm/22.0-native HIP/chipStar/main level-zero/dgpu HIP/H4I-MKLShim/oneapi-2025.0.4
+          module load oneapi/2025.0.4 llvm/22.0-native level-zero/dgpu
+          export CMAKE_PREFIX_PATH="$DEPS/chipstar:$DEPS/mklshim:${CMAKE_PREFIX_PATH:-}"
+          export LD_LIBRARY_PATH="$DEPS/chipstar/lib:$DEPS/mklshim/lib:${LD_LIBRARY_PATH:-}"
           INSTALL_PREFIX="$PWD/build/install"
           rm -rf tests/cmake-consumer/build
           cmake -S tests/cmake-consumer -B tests/cmake-consumer/build \
-            -DCMAKE_CXX_COMPILER="$(which hipcc)" \
+            -DCMAKE_CXX_COMPILER="$DEPS/chipstar/bin/hipcc" \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_PREFIX_PATH="$INSTALL_PREFIX" \
+            -DCMAKE_PREFIX_PATH="$INSTALL_PREFIX;$DEPS/chipstar;$DEPS/mklshim" \
             -Dhipfft_DIR="$INSTALL_PREFIX/lib/cmake/hipfft" \
             -DCMAKE_POLICY_VERSION_MINIMUM=3.5
           cmake --build tests/cmake-consumer/build -j 8
