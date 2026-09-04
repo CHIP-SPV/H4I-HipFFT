@@ -82,13 +82,12 @@ add_library(hipfft SHARED
     src/hipfft.cpp
 )
 
-# Link against MKL and other required libraries
+# MKL is reached through H4I::MKLShim; linking MKL::MKL here would also pull in
+# its Intel OpenMP dependency, which dependent executables cannot resolve.
 target_link_libraries(hipfft
     PUBLIC
         hip::host
         H4I::MKLShim
-    PRIVATE
-        MKL::MKL
 )
 
 # Set properties for the hipfft target
@@ -96,10 +95,6 @@ set_target_properties(hipfft PROPERTIES
     OUTPUT_NAME "hipfft"
     POSITION_INDEPENDENT_CODE ON
 )
-
-# Modify the hipfft target to use Intel's SYCL flag
-target_compile_options(hipfft PRIVATE -fsycl)
-target_link_options(hipfft PRIVATE -fsycl)
 
 # Add the directory containing hipfftHandle.h to the include directories
 target_include_directories(hipfft PUBLIC
