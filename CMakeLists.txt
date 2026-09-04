@@ -100,7 +100,6 @@ set_target_properties(hipfft PROPERTIES
 # Modify the hipfft target to use Intel's SYCL flag
 target_compile_options(hipfft PRIVATE -fsycl)
 target_link_options(hipfft PRIVATE -fsycl)
-target_link_libraries(hipfft PUBLIC ${OMP_LIBRARY}) # default MKL threading needs this
 
 # Add the directory containing hipfftHandle.h to the include directories
 target_include_directories(hipfft PUBLIC
